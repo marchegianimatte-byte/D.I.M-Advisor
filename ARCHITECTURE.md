@@ -21,6 +21,7 @@ d2-auditor/
 │   ├── wishlist_sync.js # Sync wishlist Aegis/Voltron (.txt) e Manifest Bungie IT
 │   ├── weapons_ui.js   # Rendering tabella, filtri e badge della scheda Armi
 │   ├── armor_eval.js   # Logica pura: calcolo punti sprecati e verifica bonus set
+│   ├── armor_compare.js # Confronto on-demand slot armatura con pezzi in deposito
 │   ├── armor_ui.js     # Rendering riepilogo, statistiche, set e tabella Build Armature
 │   └── rules_ui.js     # Editor regole perk/statistiche, export JSON e ripristino default
 └── tests/

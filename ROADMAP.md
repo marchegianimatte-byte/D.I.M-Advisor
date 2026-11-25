@@ -28,6 +28,6 @@
 - **Obiettivo:** Leggere `Wishlist` e `Wishlist Note` da `destinyWeapons.csv` in `parser.js` per assegnare priorità `"TIENI (Wishlist DIM)"` in `weapon_eval.js` (con fallback su regole custom) e aggiungere in `rules_ui.js` l'importazione di regole custom da file `.json`/`.csv` o URL raw CORS-enabled con nomi perk testuali (escludendo `.txt` a hash numerici).
 - **DoD:** Le armi con `wishlistMatch === true` mostrano il badge prioritario `TIENI (Wishlist DIM)` con eventuale `wishlistNote`; dalla scheda **Regole** è possibile importare un file `.json`/`.csv` o URL CORS aggiornando subito la valutazione armi.
 
-## Milestone 7: Confronto Slot Armatura con Inventario [ ]
+## Milestone 7: Confronto Slot Armatura con Inventario [x]
 - **Obiettivo:** Conservare tutte le armature di `destinyArmor.csv` in `parser.js` aggiungendo `equipped`, `classType` (da `Equippable`), `baseTotal` e `archetype` (due statistiche base principali); mantenere il calcolo build su `equipped === true` e aggiungere nella scheda **Build Armature** un confronto on-demand per slot con i pezzi in deposito (`classType` e slot corrispondenti) ordinati per Set, Tier, Archetipo e riduzione punti sprecati.
 - **DoD:** Per ogni slot della build equipaggiata è possibile aprire il confronto con l'inventario del deposito visualizzando Set, Tier, Archetipo, Base Total e delta punti sprecati rispetto al pezzo equipaggiato.

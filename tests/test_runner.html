@@ -17,6 +17,7 @@
   <script src="../src/weapon_eval.js" defer></script>
   <script src="../src/weapons_ui.js" defer></script>
   <script src="../src/armor_eval.js" defer></script>
+  <script src="../src/armor_compare.js" defer></script>
   <script src="../src/armor_ui.js" defer></script>
   <script src="../src/rules_ui.js" defer></script>
   <script src="../src/app.js" defer></script>
@@ -69,12 +70,12 @@
       ].join('\n');
 
       var SAMPLE_ARMOR_CSV = [
-        'Name,Hash,Id,Tag,Tier,Rarity,Type,Equippable,Category,Power,Locked,Equipped,Health (Base),Melee (Base),Grenade (Base),Super (Base),Class (Base),Weapons (Base),Health,Melee,Grenade,Super,Class,Weapons,Perks 0,Perks 1',
-        'Maschera di Bakris,2177524718,10,favorite,5,Esotica,Helmet,Hunter,Helmet,2000,true,true,18,14,2,16,2,12,28,14,2,16,2,12,Salute +10*,Doratura crescente',
-        'Elmo Inutile,2177524719,11,,5,Leggendaria,Helmet,Hunter,Helmet,1990,false,false,10,10,10,10,10,10,10,10,10,10,10,10,,'
+        'Name,Hash,Id,Tag,Tier,Rarity,Type,Equippable,Power,Locked,Equipped,Health (Base),Melee (Base),Grenade (Base),Super (Base),Class (Base),Weapons (Base),Health,Melee,Grenade,Super,Class,Weapons,Perks 0,Perks 1',
+        'Maschera di Bakris,2177524718,10,favorite,5,Esotica,Casco,Cacciatori,2000,true,true,18,14,2,16,2,12,28,14,2,16,2,12,Salute +10*,Doratura crescente',
+        'Elmo Deposito,2177524719,11,,5,Leggendaria,Cappuccio,Cacciatori,1990,false,false,20,10,5,10,15,5,20,10,5,10,15,5,,'
       ].join('\n');
 
-      runTest('M0/M4/M5: Parser estrae intrinsic, rarity, baseStats, mods e tiene solo armature equipaggiate', function () {
+      runTest('M0/M4/M5/M7: Parser estrae intrinsic, rarity, baseStats, baseTotal, archetype, classType e Vault', function () {
         var wRes = window.App.Parser.parseAndNormalize(SAMPLE_WEAPONS_CSV, 'destinyWeapons.csv');
         var aRes = window.App.Parser.parseAndNormalize(SAMPLE_ARMOR_CSV, 'destinyArmor.csv');
         assert(wRes.items.length === 4, 'Armi attese 4');
@@ -83,7 +84,10 @@
         assert(wRes.items[0].perks.join(' ').indexOf('Conta-uccisioni') === -1, 'Conta-uccisioni non filtrato');
         assert(wRes.items[0].perks.join(' ').indexOf('Livello 10') === -1, 'Livello non filtrato');
         assert(wRes.items[1].perks.join(' ').indexOf('Tracciatore') === -1, 'Tracciatore non filtrato');
-        assert(aRes.items.length === 1 && aRes.items[0].name === 'Maschera di Bakris', 'Deve restare solo armatura equipaggiata');
+        assert(aRes.items.length === 2, 'Devono restare sia equipaggiati che Vault');
+        assert(aRes.items[0].equipped === true && aRes.items[1].equipped === false, 'Flag equipped errato');
+        assert(aRes.items[1].classType === 'Hunter' && aRes.items[1].slot === 'Helmet', 'classType/slot Vault errati');
+        assert(aRes.items[1].baseTotal === 65 && aRes.items[1].archetype === 'Salute / Classe', 'baseTotal/archetype errati');
         assert(aRes.items[0].rarity === 'Esotica', 'rarity non estratta');
         assert(aRes.items[0].baseStats.health === 18 && aRes.items[0].stats.health === 28, 'baseStats/stats errati');
         assert(aRes.items[0].mods.length === 1 && aRes.items[0].mods[0] === 'Salute +10', 'Doratura crescente non filtrata da mods');
@@ -311,6 +315,30 @@
         document.getElementById('weapon-mode-filter').value = 'pve';
         document.getElementById('weapon-wishlist-filter').value = 'all';
         window.App.WishlistDB.setMemoryCache(null);
+        window.App.Storage.clearDatasets();
+      });
+
+      runTest('M7: ArmorCompare confronta slot con Vault, calcola delta sprechi e apre sottotabella UI', function () {
+        var build = [
+          { name: 'Veste Attuale', tier: '5', type: 'Veste', slot: 'Chest Armor', classType: 'Warlock', owner: 'Stregone', equipped: true, stats: { health: 27 }, baseStats: { health: 27 }, baseTotal: 62, archetype: 'Salute / Classe', perks: ['Set A'] },
+          { name: 'Casco', tier: '5', type: 'Casco', slot: 'Helmet', classType: 'Warlock', owner: 'Stregone', equipped: true, stats: { health: 20 }, baseStats: { health: 20 }, baseTotal: 60, perks: ['Set A'] },
+          { name: 'Veste Vault Top', tier: '5', type: 'Casacca', slot: 'Chest Armor', classType: 'Warlock', owner: 'Vault', equipped: false, stats: { health: 20 }, baseStats: { health: 20 }, baseTotal: 68, archetype: 'Salute / Granata', perks: ['Set A'] },
+          { name: 'Corazza Titano', tier: '5', type: 'Corazza', slot: 'Chest Armor', classType: 'Titan', owner: 'Vault', equipped: false, stats: { health: 20 }, baseStats: { health: 20 }, baseTotal: 70, perks: ['Set A'] }
+        ];
+        // Attuale health = 47 (7 sprecati). Sostituendo Veste Attuale (27) con Veste Vault Top (20) -> health = 40 (0 sprecati, delta = -7)
+        var alts = window.App.ArmorCompare.findSlotAlternatives(build.slice(0, 2), build, build[0], null, { includeMods: true });
+        assert(alts.length === 1 && alts[0].piece.name === 'Veste Vault Top', 'Filtro classType/slot Vault errato');
+        assert(alts[0].deltaWasted === -7 && alts[0].baseTotal === 68, 'Delta sprechi errato: ' + alts[0].deltaWasted);
+
+        window.App.Storage.saveDataset('armor', build, 'destinyArmor.csv');
+        window.App.ArmorUI.render();
+        var tbody = document.getElementById('armor-table-body');
+        var btn = tbody.querySelector('.armor-compare-btn');
+        var drawer = tbody.querySelector('.dup-drawer-row');
+        assert(btn && btn.textContent.indexOf('Confronta (1)') !== -1, 'Pulsante Confronta (1) mancante');
+        assert(drawer && drawer.classList.contains('hidden'), 'Sottotabella confronto deve partire chiusa');
+        btn.click();
+        assert(!drawer.classList.contains('hidden') && drawer.innerHTML.indexOf('-7') !== -1, 'Sottotabella confronto non si apre o delta mancante');
         window.App.Storage.clearDatasets();
       });
 
