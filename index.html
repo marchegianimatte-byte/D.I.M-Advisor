@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>D2 Auditor - DIM CSV</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js" defer></script>
+  <script src="src/parser.js" defer></script>
+  <script src="src/app.js" defer></script>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div>
+        <h1>D2 Auditor</h1>
+        <p class="subtitle">Importazione locale CSV da Destiny Item Manager</p>
+      </div>
+      <button id="clear-data-btn" class="btn btn-danger" type="button">Svuota dati salvati</button>
+    </header>
+
+    <section id="dropzone" class="dropzone" tabindex="0" aria-label="Area trascinamento CSV">
+      <p><strong>Trascina qui</strong> i file <code>destinyWeapons.csv</code> e <code>destinyArmor.csv</code></p>
+      <p>oppure</p>
+      <label class="btn" for="csv-file-input">Seleziona file CSV</label>
+      <input id="csv-file-input" class="hidden" type="file" accept=".csv,text/csv" multiple>
+    </section>
+
+    <section class="stats-grid" aria-label="Riepilogo oggetti caricati">
+      <div class="stat-card">
+        <div class="stat-label">Armi caricate</div>
+        <div id="weapons-count" class="stat-value">0</div>
+        <div id="weapons-meta" class="stat-meta">Nessun CSV caricato</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Armature caricate</div>
+        <div id="armor-count" class="stat-value">0</div>
+        <div id="armor-meta" class="stat-meta">Nessun CSV caricato</div>
+      </div>
+    </section>
+
+    <div id="status-bar" class="status-bar" role="status" aria-live="polite">
+      In attesa di file CSV...
+    </div>
+  </div>
+</body>
+</html>

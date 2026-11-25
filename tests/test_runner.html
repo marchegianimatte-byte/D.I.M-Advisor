@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <title>D2 Auditor - Test Runner (Milestone 0)</title>
+  <style>
+    body { font-family: monospace; background: #0e1116; color: #e6edf3; padding: 20px; }
+    .pass { color: #3fb950; }
+    .fail { color: #f85149; }
+    li { margin: 6px 0; }
+    #test-summary { font-size: 1.1rem; font-weight: bold; margin-bottom: 12px; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js" defer></script>
+  <script src="../src/parser.js" defer></script>
+  <script src="../src/app.js" defer></script>
+</head>
+<body>
+  <h1>D2 Auditor - Test Runner</h1>
+  <div id="test-summary">Esecuzione test...</div>
+  <ul id="test-results"></ul>
+
+  <!-- Elementi DOM minimi per verificare renderCounts() -->
+  <div style="display:none">
+    <span id="weapons-count">0</span>
+    <span id="weapons-meta"></span>
+    <span id="armor-count">0</span>
+    <span id="armor-meta"></span>
+  </div>
+
+  <script>
+    window.addEventListener('DOMContentLoaded', function () {
+      var resultsEl = document.getElementById('test-results');
+      var summaryEl = document.getElementById('test-summary');
+      var passed = 0;
+      var failed = 0;
+
+      function assert(condition, message) {
+        if (!condition) {
+          throw new Error(message || 'Assertion failed');
+        }
+      }
+
+      function runTest(name, fn) {
+        var li = document.createElement('li');
+        try {
+          fn();
+          passed++;
+          li.className = 'pass';
+          li.textContent = '[PASS] ' + name;
+        } catch (err) {
+          failed++;
+          li.className = 'fail';
+          li.textContent = '[FAIL] ' + name + ' -> ' + err.message;
+        }
+        resultsEl.appendChild(li);
+      }
+
+      var SAMPLE_WEAPONS_CSV = [
+        'Name,Hash,Id,Tag,Tier,Type,Category,Element,Power,Locked,Equipped,Crafted,Perks 0,Perks 1,Perks 2,Perks 3',
+        'Fatebringer,1216319404,6917529044,favorite,Legendary,Hand Cannon,KineticSlot,Kinetic,2000,true,true,false,Fluted Barrel,Tactical Mag,Explosive Payload,Firefly',
+        'Apex Predator,1851777734,6917529055,keep,Legendary,Rocket Launcher,Power,Solar,2000,true,false,true,Quick Launch,Impact Casing,Reconstruction,Bait and Switch'
+      ].join('\n');
+
+      var SAMPLE_ARMOR_CSV = [
+        'Name,Hash,Id,Tag,Tier,Type,Equippable,Category,Power,Locked,Equipped,Mobility (Base),Resilience (Base),Recovery (Base),Discipline (Base),Intellect (Base),Strength (Base),Mobility,Resilience,Recovery,Discipline,Intellect,Strength',
+        'Mask of Bakris,2177524718,6917529100,favorite,Exotic,Helmet,Hunter,Helmet,2000,true,true,18,14,2,16,2,12,28,14,2,16,2,12',
+        'Artifice Grasps,3344556677,6917529101,,Legendary,Gauntlets,Hunter,Gauntlets,1995,false,false,10,20,2,20,2,10,10,20,2,20,2,10',
+        'Heart of Inmost Light,1122334455,6917529102,keep,Exotic,Chest Armor,Titan,Chest Armor,2000,true,false,2,24,6,22,2,8,2,24,6,22,2,8'
+      ].join('\n');
+
+      runTest('Parser riconosce e normalizza destinyWeapons.csv', function () {
+        var res = window.App.Parser.parseAndNormalize(SAMPLE_WEAPONS_CSV, 'destinyWeapons.csv');
+        assert(res.type === 'weapons', 'Tipo atteso weapons, ricevuto ' + res.type);
+        assert(res.items.length === 2, 'Numero armi atteso 2, ricevuto ' + res.items.length);
+        assert(res.items[0].name === 'Fatebringer', 'Nome prima arma errato');
+        assert(res.items[0].perks.length === 4, 'Perk attesi 4, ricevuti ' + res.items[0].perks.length);
+        assert(res.items[1].crafted === true, 'Crafted atteso true');
+      });
+
+      runTest('Parser riconosce e normalizza destinyArmor.csv', function () {
+        var res = window.App.Parser.parseAndNormalize(SAMPLE_ARMOR_CSV, 'destinyArmor.csv');
+        assert(res.type === 'armor', 'Tipo atteso armor, ricevuto ' + res.type);
+        assert(res.items.length === 3, 'Numero armature atteso 3, ricevuto ' + res.items.length);
+        assert(res.items[0].equippable === 'Hunter', 'Equippable errato');
+        assert(res.items[0].stats.resilience_base === 14, 'Resilience base errata');
+        assert(res.items[0].stats.mobility === 28, 'Mobility errata');
+      });
+
+      runTest('Persistenza localStorage e rendering conteggi (simulazione F5)', function () {
+        window.App.Storage.clearDatasets();
+
+        var wRes = window.App.Parser.parseAndNormalize(SAMPLE_WEAPONS_CSV, 'destinyWeapons.csv');
+        var aRes = window.App.Parser.parseAndNormalize(SAMPLE_ARMOR_CSV, 'destinyArmor.csv');
+
+        window.App.Storage.saveDataset('weapons', wRes.items, 'destinyWeapons.csv');
+        window.App.Storage.saveDataset('armor', aRes.items, 'destinyArmor.csv');
+
+        // Simula reload: rilegge da localStorage e aggiorna DOM
+        var loadedW = window.App.Storage.loadDataset('weapons');
+        var loadedA = window.App.Storage.loadDataset('armor');
+        window.App.Storage.renderCounts();
+
+        assert(loadedW && loadedW.items.length === 2, 'Armi ricaricate da localStorage non corrispondono');
+        assert(loadedA && loadedA.items.length === 3, 'Armature ricaricate da localStorage non corrispondono');
+        assert(document.getElementById('weapons-count').textContent === '2', 'DOM weapons-count errato');
+        assert(document.getElementById('armor-count').textContent === '3', 'DOM armor-count errato');
+
+        window.App.Storage.clearDatasets();
+        window.App.Storage.renderCounts();
+        assert(document.getElementById('weapons-count').textContent === '0', 'Reset weapons-count fallito');
+        assert(document.getElementById('armor-count').textContent === '0', 'Reset armor-count fallito');
+      });
+
+      summaryEl.textContent = 'Risultato: ' + passed + ' passati, ' + failed + ' falliti.';
+      summaryEl.className = failed === 0 ? 'pass' : 'fail';
+      document.body.setAttribute('data-test-status', failed === 0 ? 'PASS' : 'FAIL');
+    });
+  </script>
+</body>
+</html>
