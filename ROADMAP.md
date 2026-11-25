@@ -15,3 +15,11 @@
 ## Milestone 3: Editor Regole Integrato [x]
 - **Obiettivo:** Aggiungere una scheda "Regole" nell'interfaccia per modificare i perk ricercati e i target delle statistiche senza dover aprire il codice, salvando tutto in `localStorage` con pulsante di export JSON.
 - **DoD:** Modificando un target statistica dalla UI, i badge nelle schede Armi e Armature si aggiornano istantaneamente.
+
+## Milestone 4: Fix Statistiche/Target, Armi PvE/PvP e Sottocartella Duplicati [ ]
+- **Obiettivo:** Allineare chiavi ed etichette statistiche tramite `STAT_LABELS` (`health`, `melee`, `grenade`, `super`, `class`, `weapons`, range `0-200`) migrando `d2_auditor_rules`; aggiungere selettore/regole `mode` PvE vs PvP su **Armi** e **Regole** (con fallback `"pve"`); raggruppare le armi per `hash` mostrando la copia migliore con contatore cliccabile che espande la sottocartella/drawer di tutte le copie; rimuovere il contatore copie sotto le armature.
+- **DoD:** La scheda **Regole** e **Build Armature** usano le 6 statistiche attuali (`0-200`) migrando eventuali vecchie chiavi; la scheda **Armi** filtra per modalità PvE/PvP e espande la sottocartella duplicati al click sul contatore copie; sotto le armature non compare alcun contatore copie.
+
+## Milestone 5: Audit Mod Armature e Toggle Statistiche Base [ ]
+- **Obiettivo:** Parsare `baseStats` (`"<Stat> (Base)"`) e `mods` (`"Perks *"`) da `destinyArmor.csv` in `parser.js`; visualizzare le mod su ogni pezzo segnalando sprechi delle mod statistica (`+5`/`+10` oltre cap o fuori multiplo di 10) e aggiungere la spunta per commutare i punteggi statistica con o senza mod/Masterwork.
+- **DoD:** La scheda **Build Armature** mostra le mod equipaggiate per pezzo, segnala gli sprechi delle mod statistica e aggiorna istantaneamente i totali e gli sprechi al cambio della spunta statistiche base/totali.

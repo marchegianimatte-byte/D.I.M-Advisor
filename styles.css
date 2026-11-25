@@ -83,6 +83,8 @@ h1 { font-size: 1.2rem; font-weight: 600; }
 .data-table th, .data-table td { padding: 8px 10px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
 .data-table th { font-size: 0.75rem; text-transform: uppercase; color: var(--text-muted); background: var(--surface-hover); }
 .empty-cell, .placeholder-note { text-align: center; color: var(--text-muted); padding: 20px; }
+.perks-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; min-width: 240px; }
+.perks-col-title { font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 3px; }
 .perks-cell { display: flex; flex-wrap: wrap; gap: 4px; }
 .perk-pill {
   display: inline-block;
@@ -116,4 +118,8 @@ h1 { font-size: 1.2rem; font-weight: 600; }
 .rule-stat-item { display: flex; justify-content: space-between; align-items: center; gap: 8px; background: var(--surface-hover); padding: 6px 8px; border-radius: 6px; }
 .rule-stat-input { width: 72px; }
 .combo-card { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 8px; border: 1px solid var(--border); border-radius: 6px; margin-bottom: 8px; background: var(--surface-hover); }
+.copy-toggle-btn { background: transparent; border: 1px solid var(--border); color: var(--accent); border-radius: 4px; padding: 1px 6px; font-size: 0.72rem; cursor: pointer; margin-left: 4px; }
+.dup-drawer { display: flex; flex-direction: column; gap: 8px; padding: 6px 10px; background: var(--bg); border-left: 3px solid var(--accent); }
+.dup-item { display: flex; flex-direction: column; gap: 4px; }
+.mode-pill { display: inline-block; padding: 1px 6px; border-radius: 4px; font-size: 0.7rem; background: var(--surface); border: 1px solid var(--border); color: var(--accent); }
 .hidden { display: none; }

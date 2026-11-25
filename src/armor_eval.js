@@ -3,15 +3,15 @@
 
   var App = global.App = global.App || {};
 
-  var STAT_LABELS = {
-    mobility: 'Mobilità', resilience: 'Resilienza', recovery: 'Recupero',
-    discipline: 'Disciplina', intellect: 'Intelletto', strength: 'Forza',
-    health: 'Salute', melee: 'Corpo a corpo', grenade: 'Granata',
-    super: 'Super', class: 'Classe', weapons: 'Armi'
-  };
+  function getStatLabels() {
+    return App.STAT_LABELS || {
+      health: 'Salute', melee: 'Corpo a corpo', grenade: 'Granata',
+      super: 'Super', class: 'Classe', weapons: 'Armi'
+    };
+  }
 
   function getActiveStatKeys(pieces) {
-    var keys = Object.keys(STAT_LABELS);
+    var keys = Object.keys(getStatLabels());
     var active = [];
     for (var i = 0; i < keys.length; i++) {
       var k = keys[i];
@@ -59,6 +59,7 @@
   }
 
   function evaluateBuild(pieces, armorRules) {
+    var labels = getStatLabels();
     var equipped = (pieces || []).filter(function (p) { return p && p.equipped; });
     var activeKeys = getActiveStatKeys(equipped);
     var targets = (armorRules && armorRules.statTargets) || {};
@@ -72,7 +73,7 @@
       totalWasted += wasted;
       wastedByKey[k] = wasted;
       statBreakdown.push({
-        key: k, label: STAT_LABELS[k] || k, total: total,
+        key: k, label: labels[k] || k, total: total,
         tier: Math.floor(total / 10), wasted: wasted,
         target: target, targetMet: target === null ? true : total >= target
       });
@@ -115,7 +116,7 @@
   }
 
   App.ArmorEval = {
-    STAT_LABELS: STAT_LABELS, extractSetName: extractSetName,
+    getStatLabels: getStatLabels, extractSetName: extractSetName,
     evaluateSets: evaluateSets, evaluateBuild: evaluateBuild,
     groupEquippedByOwner: groupEquippedByOwner
   };

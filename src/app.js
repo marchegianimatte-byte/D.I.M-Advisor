@@ -8,10 +8,32 @@
     return global.JSON.parse(global.JSON.stringify(App.DEFAULT_RULES || { weapons: {}, armor: { statTargets: {} } }));
   }
 
+  function migrateRules(rules) {
+    var def = cloneDefaultRules();
+    var out = rules && typeof rules === 'object' ? rules : def;
+    out.weapons = out.weapons || def.weapons;
+    var archs = out.weapons.archetypes || {};
+    Object.keys(archs).forEach(function (k) {
+      (archs[k].combos || []).forEach(function (c) {
+        if (c.mode !== 'pve' && c.mode !== 'pvp') c.mode = 'pve';
+      });
+    });
+
+    var labels = App.STAT_LABELS || { health: 'Salute', melee: 'Corpo a corpo', grenade: 'Granata', super: 'Super', class: 'Classe', weapons: 'Armi' };
+    var oldTargets = (out.armor && out.armor.statTargets) || {};
+    var cleanTargets = {};
+    Object.keys(labels).forEach(function (k) {
+      var val = oldTargets[k] !== undefined ? Number(oldTargets[k]) : def.armor.statTargets[k];
+      cleanTargets[k] = Math.max(0, Math.min(200, isNaN(val) ? 0 : val));
+    });
+    out.armor = { statTargets: cleanTargets };
+    return out;
+  }
+
   function loadRules() {
     var raw = global.localStorage.getItem(STORAGE_KEYS.rules);
     if (!raw) return cloneDefaultRules();
-    try { return JSON.parse(raw); } catch (e) { return cloneDefaultRules(); }
+    try { return migrateRules(JSON.parse(raw)); } catch (e) { return cloneDefaultRules(); }
   }
 
   function refreshAllViews() {

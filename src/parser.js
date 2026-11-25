@@ -4,19 +4,18 @@
   var App = global.App = global.App || {};
 
   var ARMOR_CATEGORIES = ['Helmet', 'Gauntlets', 'Chest Armor', 'Leg Armor', 'ClassItem', 'Class Armor'];
-  var ARMOR_STAT_KEYS = [
-    'Mobility', 'Resilience', 'Recovery', 'Discipline', 'Intellect', 'Strength',
-    'Health', 'Melee', 'Grenade', 'Super', 'Class', 'Weapons'
-  ];
+  var ARMOR_STAT_KEYS = ['Health', 'Melee', 'Grenade', 'Super', 'Class', 'Weapons'];
+  var IGNORED_PERK_RE = /^(livello\s|conta-uccisioni|kill tracker|tracciatore)/i;
 
-  function extractPerks(row) {
+  function extractPerks(row, skipZero) {
     var perks = [];
     var keys = Object.keys(row);
     for (var i = 0; i < keys.length; i++) {
       var key = keys[i];
       if (/^Perks\s+\d+$/i.test(key) && row[key]) {
+        if (skipZero && /^Perks\s+0$/i.test(key)) continue;
         var val = String(row[key]).trim();
-        if (val) perks.push(val);
+        if (val && !IGNORED_PERK_RE.test(val)) perks.push(val);
       }
     }
     return perks;
@@ -52,6 +51,8 @@
   }
 
   function normalizeWeapon(row) {
+    var rawIntrinsic = row['Perks 0'] ? String(row['Perks 0']).replace(/\*+$/, '').trim() : '';
+    var intrinsic = (rawIntrinsic && !IGNORED_PERK_RE.test(rawIntrinsic)) ? rawIntrinsic : '';
     return {
       id: row.Id || '',
       hash: row.Hash || '',
@@ -66,7 +67,8 @@
       locked: toBool(row.Locked),
       equipped: toBool(row.Equipped),
       crafted: toBool(row.Crafted),
-      perks: extractPerks(row)
+      intrinsic: intrinsic,
+      perks: extractPerks(row, true)
     };
   }
 
@@ -123,7 +125,9 @@
     for (var i = 0; i < parsed.data.length; i++) {
       var row = parsed.data[i];
       if (row && row.Name) {
-        items.push(normalizer(row));
+        var item = normalizer(row);
+        if (type === 'armor' && !item.equipped) continue;
+        items.push(item);
       }
     }
 

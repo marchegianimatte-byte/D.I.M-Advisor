@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8">
-  <title>D2 Auditor - Test Runner (Milestone 0, 1, 2)</title>
+  <title>D2 Auditor - Test Runner (Milestone 0 - 4)</title>
   <style>
     body { font-family: monospace; background: #0e1116; color: #e6edf3; padding: 20px; }
     .pass { color: #3fb950; }
@@ -27,6 +27,7 @@
     <span id="weapons-count">0</span><span id="weapons-meta"></span>
     <span id="armor-count">0</span><span id="armor-meta"></span>
     <input id="weapon-search" value="">
+    <select id="weapon-mode-filter"><option value="pve">PvE</option><option value="pvp">PvP</option><option value="all">all</option></select>
     <select id="weapon-verdict-filter"><option value="ALL">ALL</option><option value="TIENI">TIENI</option></select>
     <select id="weapon-type-filter"><option value="ALL">ALL</option></select>
     <span id="weapons-filter-summary"></span>
@@ -35,7 +36,8 @@
     <div id="armor-waste-summary"></div><div id="armor-stats-grid"></div><div id="armor-sets-list"></div>
     <table><tbody id="armor-table-body"></tbody></table>
     <div id="rules-armor-targets"></div><select id="rules-archetype-select"></select><div id="rules-combos-list"></div>
-    <input id="new-combo-name"><input id="new-combo-col3"><input id="new-combo-col4">
+    <input id="new-combo-name"><select id="new-combo-mode"><option value="pve">pve</option><option value="pvp">pvp</option></select>
+    <input id="new-combo-col3"><input id="new-combo-col4">
     <button id="add-combo-btn"></button><button id="export-rules-btn"></button><button id="reset-rules-btn"></button>
   </div>
   <script>
@@ -44,9 +46,7 @@
       var summaryEl = document.getElementById('test-summary');
       var passed = 0, failed = 0;
 
-      function assert(condition, message) {
-        if (!condition) throw new Error(message || 'Assertion failed');
-      }
+      function assert(condition, message) { if (!condition) throw new Error(message || 'Assertion failed'); }
       function runTest(name, fn) {
         var li = document.createElement('li');
         try { fn(); passed++; li.className = 'pass'; li.textContent = '[PASS] ' + name; }
@@ -55,88 +55,106 @@
       }
 
       var SAMPLE_WEAPONS_CSV = [
-        'Name,Hash,Id,Tag,Tier,Type,Category,Element,Power,Locked,Equipped,Crafted,Perks 0,Perks 1,Perks 2,Perks 3',
-        'Araldo del Fato,1216319404,1,favorite,Legendary,Cannone portatile,KineticSlot,Kinetic,2000,true,true,false,Canna scanalata,Caricatore tattico,Fuorilegge*,Carica esplosiva*',
-        'Predatore Apicale,1851777734,2,keep,Legendary,Lanciarazzi,Power,Solar,2000,true,false,true,Lancio rapido,Rivestimento d\'impatto,Ricostruzione,Fuso bipede',
-        'Arma Mediocre,9999999999,3,,Legendary,Cannone portatile,Energy,Void,1990,false,false,false,Canna estesa,Proiettili di precisione,Senso del pericolo,Adagio'
-      ].join('\n');
-      var SAMPLE_ARMOR_CSV = [
-        'Name,Hash,Id,Tag,Tier,Type,Equippable,Category,Power,Locked,Equipped,Mobility (Base),Resilience (Base),Recovery (Base),Discipline (Base),Intellect (Base),Strength (Base),Mobility,Resilience,Recovery,Discipline,Intellect,Strength',
-        'Maschera di Bakris,2177524718,10,favorite,Exotic,Helmet,Hunter,Helmet,2000,true,true,18,14,2,16,2,12,28,14,2,16,2,12'
+        'Name,Hash,Id,Tag,Tier,Type,Category,Element,Power,Locked,Equipped,Crafted,Perks 0,Perks 1,Perks 2,Perks 3,Perks 4,Perks 5',
+        'Araldo del Fato,1216319404,1,favorite,5,Cannone portatile,KineticSlot,Kinetic,2000,true,true,false,Telaio adattivo,Canna scanalata*,Fuorilegge*,Carica esplosiva*,Conta-uccisioni,Livello 10',
+        'Araldo del Fato (Adepta),9876543210,4,,0,Cannone portatile,KineticSlot,Kinetic,1990,false,false,false,Telaio adattivo,Canna estesa,Movimento perpetuo*,Occhio del ciclone*,Tracciatore,Kill Tracker',
+        'Predatore Apicale,1851777734,2,keep,3,Lanciarazzi,Power,Solar,2000,true,false,true,Telaio adattivo,Lancio rapido*,Ricostruzione*,Fuso bipede,,',
+        'Arma Mediocre,9999999999,3,,Legendary,Cannone portatile,Energy,Void,1990,false,false,false,Telaio di precisione,Canna estesa,Senso del pericolo,Adagio,,'
       ].join('\n');
 
-      runTest('M0: Parser riconosce CSV armi e armature', function () {
+      var SAMPLE_ARMOR_CSV = [
+        'Name,Hash,Id,Tag,Tier,Type,Equippable,Category,Power,Locked,Equipped,Health (Base),Melee (Base),Grenade (Base),Super (Base),Class (Base),Weapons (Base),Health,Melee,Grenade,Super,Class,Weapons',
+        'Maschera di Bakris,2177524718,10,favorite,Exotic,Helmet,Hunter,Helmet,2000,true,true,18,14,2,16,2,12,28,14,2,16,2,12',
+        'Elmo Inutile,2177524719,11,,Legendary,Helmet,Hunter,Helmet,1990,false,false,10,10,10,10,10,10,10,10,10,10,10,10'
+      ].join('\n');
+
+      runTest('M0/M4: Parser estrae intrinsic (Perks 0), filtra perk non funzionali e tiene solo armature equipaggiate', function () {
         var wRes = window.App.Parser.parseAndNormalize(SAMPLE_WEAPONS_CSV, 'destinyWeapons.csv');
         var aRes = window.App.Parser.parseAndNormalize(SAMPLE_ARMOR_CSV, 'destinyArmor.csv');
-        assert(wRes.type === 'weapons' && wRes.items.length === 3, 'Parsing armi errato');
-        assert(aRes.type === 'armor' && aRes.items.length === 1, 'Parsing armature errato');
+        assert(wRes.items.length === 4, 'Armi attese 4');
+        assert(wRes.items[0].intrinsic === 'Telaio adattivo', 'Intrinsic atteso Telaio adattivo');
+        assert(wRes.items[0].perks.indexOf('Telaio adattivo') === -1, 'Perks 0 non deve stare in perks');
+        assert(wRes.items[0].perks.join(' ').indexOf('Conta-uccisioni') === -1, 'Conta-uccisioni non filtrato');
+        assert(wRes.items[0].perks.join(' ').indexOf('Livello 10') === -1, 'Livello non filtrato');
+        assert(wRes.items[1].perks.join(' ').indexOf('Tracciatore') === -1, 'Tracciatore non filtrato');
+        assert(aRes.items.length === 1 && aRes.items[0].name === 'Maschera di Bakris', 'Deve restare solo armatura equipaggiata');
       });
 
-      runTest('M0: Persistenza localStorage (simulazione F5)', function () {
-        window.App.Storage.clearDatasets();
+      runTest('M1/M4: WeaponEval distingue PvE vs PvP e raggruppa per Name normalizzato + Type', function () {
+        var wRes = window.App.Parser.parseAndNormalize(SAMPLE_WEAPONS_CSV, 'destinyWeapons.csv');
+        var pveEval = window.App.WeaponEval.evaluateAll(wRes.items, null, 'pve');
+        var pvpEval = window.App.WeaponEval.evaluateAll(wRes.items, null, 'pvp');
+        assert(pveEval[0].eval.verdict === 'TIENI' && pveEval[1].eval.verdict === 'INFONDI/SCARTA', 'Valutazione PvE errata');
+        assert(pvpEval[1].eval.verdict === 'TIENI', 'Copia 2 (Adepta) deve essere TIENI in PvP');
+        var groups = window.App.WeaponEval.groupByWeaponKey(pveEval);
+        assert(groups.length === 3 && groups[0].count === 2 && groups[0].best.weapon.id === '1', 'Raggruppamento Name+Type errato');
+      });
+
+      runTest('M4: WeaponsUI mostra Tier X, intrinsic, perk Attivi/Alternativi senza * e drawer duplicati', function () {
         var wRes = window.App.Parser.parseAndNormalize(SAMPLE_WEAPONS_CSV, 'destinyWeapons.csv');
         window.App.Storage.saveDataset('weapons', wRes.items, 'destinyWeapons.csv');
-        var loaded = window.App.Storage.loadDataset('weapons');
-        assert(loaded && loaded.items.length === 3, 'Ricaricamento da localStorage fallito');
-      });
-
-      runTest('M1: WeaponEval assegna TIENI, ROLL PARZIALE e INFONDI/SCARTA con perk IT', function () {
-        var wRes = window.App.Parser.parseAndNormalize(SAMPLE_WEAPONS_CSV, 'destinyWeapons.csv');
-        var evKeep = window.App.WeaponEval.evaluateWeapon(wRes.items[0]);
-        var evPartial = window.App.WeaponEval.evaluateWeapon(wRes.items[1]);
-        var evTrash = window.App.WeaponEval.evaluateWeapon(wRes.items[2]);
-        assert(evKeep.verdict === 'TIENI' && evKeep.matchedPerks.indexOf('Fuorilegge') !== -1, 'TIENI errato');
-        assert(evPartial.verdict === 'ROLL PARZIALE' && evPartial.matchedPerks[0] === 'Ricostruzione', 'ROLL PARZIALE errato');
-        assert(evTrash.verdict === 'INFONDI/SCARTA' && evTrash.matchedPerks.length === 0, 'INFONDI/SCARTA errato');
-      });
-
-      runTest('M1: WeaponsUI renderizza tabella, badge, perk verdi e filtri', function () {
-        var tbody = document.getElementById('weapons-table-body');
+        document.getElementById('weapon-mode-filter').value = 'pve';
         document.getElementById('weapon-verdict-filter').value = 'ALL';
-        document.getElementById('weapon-search').value = '';
         window.App.WeaponsUI.render();
-        assert(tbody.querySelectorAll('tr').length === 3, 'Attese 3 righe in tabella');
-        assert(tbody.querySelectorAll('.badge-keep').length === 1 && tbody.querySelectorAll('.perk-match').length === 3, 'Badge/perk errati');
-        document.getElementById('weapon-verdict-filter').value = 'TIENI';
-        window.App.WeaponsUI.render();
-        assert(tbody.querySelectorAll('tr').length === 1, 'Filtro TIENI deve mostrare 1 riga');
-        window.App.Storage.clearDatasets();
+        var tbody = document.getElementById('weapons-table-body');
+        assert(tbody.innerHTML.indexOf('Tier 5') !== -1 && tbody.innerHTML.indexOf('Telaio adattivo') !== -1, 'Tier X o intrinsic mancanti');
+        assert(tbody.innerHTML.indexOf('Attivi') !== -1 && tbody.innerHTML.indexOf('Alternativi') !== -1, 'Colonne Attivi/Alternativi mancanti');
+        assert(tbody.querySelector('.perk-pill').textContent.indexOf('*') === -1, 'Asterisco * non rimosso dal testo perk');
+        var toggleBtn = tbody.querySelector('.copy-toggle-btn');
+        var drawer = tbody.querySelector('.dup-drawer-row');
+        assert(toggleBtn && toggleBtn.textContent.indexOf('2 copie') !== -1, 'Bottone contatore copie mancante');
+        assert(drawer && drawer.classList.contains('hidden'), 'Drawer deve partire chiuso');
+        toggleBtn.click();
+        assert(!drawer.classList.contains('hidden'), 'Drawer deve aprirsi al click');
+        assert(drawer.querySelectorAll('.dup-item').length === 2, 'Drawer deve mostrare entrambe le copie');
       });
 
-      runTest('M2: ArmorEval calcola punti sprecati, bonus set 2/4 e pezzi da sostituire', function () {
+      runTest('M4: Drawer duplicati si apre anche con virgolette doppie nel nome arma', function () {
+        var quotedWeapons = [
+          { id: '101', hash: '555', name: '"Ammaliatrice" M-17', tier: '5', type: 'Mitraglietta', element: 'Arc', power: 2000, intrinsic: 'Telaio leggero', perks: ['Alimenta la frenesia*', 'Frenesia*'] },
+          { id: '102', hash: '555', name: '"Ammaliatrice" M-17', tier: '5', type: 'Mitraglietta', element: 'Arc', power: 1995, intrinsic: 'Telaio leggero', perks: ['Sussistenza*', 'Uno per tutti'] }
+        ];
+        window.App.Storage.saveDataset('weapons', quotedWeapons, 'destinyWeapons.csv');
+        document.getElementById('weapon-mode-filter').value = 'pve';
+        document.getElementById('weapon-verdict-filter').value = 'ALL';
+        window.App.WeaponsUI.render();
+        var tbody = document.getElementById('weapons-table-body');
+        var toggleBtn = tbody.querySelector('.copy-toggle-btn');
+        var drawer = tbody.querySelector('.dup-drawer-row');
+        assert(toggleBtn && drawer && drawer.classList.contains('hidden'), 'Setup drawer arma con virgolette fallito');
+        toggleBtn.click();
+        assert(!drawer.classList.contains('hidden'), 'Drawer arma con virgolette deve aprirsi al click');
+        assert(drawer.querySelectorAll('.dup-item').length === 2, 'Drawer deve mostrare 2 copie');
+      });
+
+      runTest('M2/M4: ArmorEval usa le 6 statistiche attuali e nessun contatore copie', function () {
         var armorSet = [
-          { name: 'Elmo Set A', tier: 'Legendary', category: 'Helmet', owner: 'Hunter', equipped: true, stats: { resilience: 24, strength: 15 }, perks: ['Bonus Set A'] },
-          { name: 'Guanti Set A', tier: 'Legendary', category: 'Gauntlets', owner: 'Hunter', equipped: true, stats: { resilience: 25, strength: 12 }, perks: ['Bonus Set A'] },
-          { name: 'Torso Set A', tier: 'Legendary', category: 'Chest Armor', owner: 'Hunter', equipped: true, stats: { resilience: 30, strength: 10 }, perks: ['Bonus Set A'] },
-          { name: 'Gambe Altro', tier: 'Legendary', category: 'Leg Armor', owner: 'Hunter', equipped: true, stats: { resilience: 18, strength: 10 }, perks: ['Bonus Set B'] }
+          { name: 'Elmo Set A', tier: 'Legendary', category: 'Helmet', owner: 'Hunter', equipped: true, stats: { health: 24, weapons: 15 }, perks: ['Bonus Set A'] },
+          { name: 'Guanti Set A', tier: 'Legendary', category: 'Gauntlets', owner: 'Hunter', equipped: true, stats: { health: 25, weapons: 12 }, perks: ['Bonus Set A'] },
+          { name: 'Torso Set A', tier: 'Legendary', category: 'Chest Armor', owner: 'Hunter', equipped: true, stats: { health: 30, weapons: 10 }, perks: ['Bonus Set A'] },
+          { name: 'Gambe Altro', tier: 'Legendary', category: 'Leg Armor', owner: 'Hunter', equipped: true, stats: { health: 18, weapons: 10 }, perks: ['Bonus Set B'] }
         ];
         var res = window.App.ArmorEval.evaluateBuild(armorSet);
-        assert(res.totalWasted === 14, 'Attesi 14 punti sprecati, ricevuti ' + res.totalWasted);
-        assert(res.summaryText.indexOf('14 punti persi') !== -1, 'Summary errato');
-        assert(res.summaryText.indexOf('Resilienza (7)') !== -1 && res.summaryText.indexOf('Forza (7)') !== -1, 'Dettaglio stat errato');
-        assert(res.sets[0].name === 'Bonus Set A' && res.sets[0].bonus2 === true && res.sets[0].bonus4 === false, 'Verifica set 2/4 errata');
-        assert(res.pieces.some(function (p) { return p.piece.name === 'Gambe Altro' && p.replaceSuggested; }), 'Pezzo fuori set non segnalato');
+        assert(res.totalWasted === 14 && res.summaryText.indexOf('Salute (7)') !== -1 && res.summaryText.indexOf('Armi (7)') !== -1, 'Calcolo 6 stat errato');
         window.App.Storage.saveDataset('armor', armorSet, 'destinyArmor.csv');
         window.App.ArmorUI.render();
-        assert(document.getElementById('armor-waste-summary').textContent.indexOf('14 punti persi') !== -1, 'ArmorUI summary errato');
-        assert(document.getElementById('armor-table-body').querySelectorAll('tr').length === 4, 'ArmorUI righe errate');
-        window.App.Storage.clearDatasets();
+        assert(document.getElementById('armor-table-body').querySelectorAll('.copy-toggle-btn').length === 0, 'Nessun contatore copie sotto armature');
       });
 
-      runTest('M3: RulesUI salva in d2_auditor_rules e aggiorna subito Armi e Armature', function () {
-        window.App.Storage.resetRules();
+      runTest('M3/M4: Migrazione d2_auditor_rules e aggiornamento target 0-200', function () {
+        localStorage.setItem('d2_auditor_rules', JSON.stringify({
+          weapons: window.App.DEFAULT_RULES.weapons,
+          armor: { statTargets: { mobility: 50, resilience: 100, health: 120 } }
+        }));
+        var migrated = window.App.Storage.loadRules();
+        assert(migrated.armor.statTargets.mobility === undefined && migrated.armor.statTargets.resilience === undefined, 'Vecchie chiavi non rimosse');
+        assert(migrated.armor.statTargets.health === 120 && migrated.armor.statTargets.weapons === 100, 'Migrazione chiavi attuali fallita');
         window.App.RulesUI.render();
-        var armorSet = [{ name: 'Elmo', tier: 'Legendary', category: 'Helmet', owner: 'Hunter', equipped: true, stats: { resilience: 95 }, perks: [] }];
-        window.App.Storage.saveDataset('armor', armorSet, 'destinyArmor.csv');
-        window.App.ArmorUI.render();
-        assert(document.getElementById('armor-stats-grid').innerHTML.indexOf('Sotto 100') !== -1, 'Target default 100 atteso');
-
-        var resInput = document.querySelector('#rules-armor-targets input[data-stat-key="resilience"]');
-        resInput.value = '90';
-        resInput.dispatchEvent(new Event('input'));
-        assert(localStorage.getItem('d2_auditor_rules') !== null, 'd2_auditor_rules non salvato');
+        var inp = document.querySelector('#rules-armor-targets input[data-stat-key="health"]');
+        assert(inp && inp.max === '200', 'Range input 0-200 mancante');
+        inp.value = '90';
+        inp.dispatchEvent(new Event('input'));
         assert(document.getElementById('armor-stats-grid').innerHTML.indexOf('Target OK') !== -1, 'Badge Armature non aggiornato');
-
         window.App.Storage.resetRules();
         window.App.Storage.clearDatasets();
       });

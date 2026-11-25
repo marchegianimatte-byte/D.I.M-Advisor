@@ -11,7 +11,7 @@
     var container = document.getElementById('rules-armor-targets');
     if (!container) return;
     var targets = (rules.armor && rules.armor.statTargets) || {};
-    var labels = (App.ArmorEval && App.ArmorEval.STAT_LABELS) || {};
+    var labels = App.STAT_LABELS || (App.ArmorEval && App.ArmorEval.getStatLabels()) || {};
     container.innerHTML = Object.keys(targets).map(function (key) {
       return '<label class="rule-stat-item">' +
         '<span>' + escapeHtml(labels[key] || key) + '</span>' +
@@ -22,9 +22,10 @@
     container.querySelectorAll('.rule-stat-input').forEach(function (inp) {
       inp.addEventListener('input', function () {
         var k = inp.getAttribute('data-stat-key');
+        var val = Math.max(0, Math.min(200, Number(inp.value) || 0));
         var current = App.Storage.loadRules();
         current.armor = current.armor || { statTargets: {} };
-        current.armor.statTargets[k] = Number(inp.value) || 0;
+        current.armor.statTargets[k] = val;
         App.Storage.saveRules(current);
       });
     });
@@ -51,8 +52,9 @@
     }
 
     listEl.innerHTML = combos.map(function (c, idx) {
+      var modeLabel = (c.mode || 'pve').toUpperCase();
       return '<div class="combo-card">' +
-        '<div><strong>' + escapeHtml(c.name) + '</strong>' +
+        '<div><strong>' + escapeHtml(c.name) + '</strong> <span class="mode-pill">' + escapeHtml(modeLabel) + '</span>' +
         '<div class="sub-meta">Col 3: ' + escapeHtml((c.col3 || []).join(', ')) + '</div>' +
         '<div class="sub-meta">Col 4: ' + escapeHtml((c.col4 || []).join(', ')) + '</div></div>' +
         '<button class="btn btn-danger remove-combo-btn" type="button" data-idx="' + idx + '">Rimuovi</button>' +
@@ -98,13 +100,14 @@
     if (addBtn) {
       addBtn.addEventListener('click', function () {
         var name = (document.getElementById('new-combo-name') || {}).value || '';
+        var mode = (document.getElementById('new-combo-mode') || {}).value || 'pve';
         var c3 = (document.getElementById('new-combo-col3') || {}).value || '';
         var c4 = (document.getElementById('new-combo-col4') || {}).value || '';
         var key = archSelect ? archSelect.value : 'default';
         if (!name.trim() || (!c3.trim() && !c4.trim())) return;
         var splitPerks = function (s) { return s.split(',').map(function (x) { return x.trim(); }).filter(Boolean); };
         var current = App.Storage.loadRules();
-        current.weapons.archetypes[key].combos.push({ name: name.trim(), col3: splitPerks(c3), col4: splitPerks(c4) });
+        current.weapons.archetypes[key].combos.push({ name: name.trim(), mode: mode, col3: splitPerks(c3), col4: splitPerks(c4) });
         App.Storage.saveRules(current);
         document.getElementById('new-combo-name').value = '';
         document.getElementById('new-combo-col3').value = '';

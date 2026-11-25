@@ -55,6 +55,11 @@
     <section id="tab-weapons" class="tab-panel">
       <div class="filters-bar">
         <input id="weapon-search" class="input" type="search" placeholder="Cerca arma o perk...">
+        <select id="weapon-mode-filter" class="input">
+          <option value="pve">PvE</option>
+          <option value="pvp">PvP</option>
+          <option value="all">Tutte (PvE + PvP)</option>
+        </select>
         <select id="weapon-verdict-filter" class="input">
           <option value="ALL">Tutti gli esiti</option>
           <option value="TIENI">TIENI</option>
@@ -126,6 +131,10 @@
         <div id="rules-combos-list"></div>
         <div class="filters-bar">
           <input id="new-combo-name" class="input" type="text" placeholder="Nome combo (es. PvE)">
+          <select id="new-combo-mode" class="input">
+            <option value="pve">PvE</option>
+            <option value="pvp">PvP</option>
+          </select>
           <input id="new-combo-col3" class="input" type="text" placeholder="Col 3 (es. Fuorilegge, Demolitore)">
           <input id="new-combo-col4" class="input" type="text" placeholder="Col 4 (es. Frenesia, Incandescente)">
           <button id="add-combo-btn" class="btn" type="button">Aggiungi combo</button>
