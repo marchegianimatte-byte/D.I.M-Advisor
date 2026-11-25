@@ -39,6 +39,7 @@
     setText('armor-count', armor && armor.items ? String(armor.items.length) : '0');
     setText('armor-meta', formatMeta(armor));
     if (App.WeaponsUI && typeof App.WeaponsUI.render === 'function') App.WeaponsUI.render();
+    if (App.ArmorUI && typeof App.ArmorUI.render === 'function') App.ArmorUI.render();
   }
 
   function setStatus(message, kind) {

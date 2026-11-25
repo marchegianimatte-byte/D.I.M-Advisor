@@ -18,6 +18,7 @@ d2-auditor/
 │   ├── parser.js       # Normalizzazione colonne CSV di DIM in oggetti puliti
 │   ├── weapon_eval.js  # Logica pura: calcolo score perk e sinergie
 │   ├── weapons_ui.js   # Rendering tabella, filtri e badge della scheda Armi
-│   └── armor_eval.js   # Logica pura: calcolo punti sprecati e verifica bonus set
+│   ├── armor_eval.js   # Logica pura: calcolo punti sprecati e verifica bonus set
+│   └── armor_ui.js     # Rendering riepilogo, statistiche, set e tabella Build Armature
 └── tests/
     └── test_runner.html # Pagina di test unitari eseguiti direttamente nel browser

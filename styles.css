@@ -102,4 +102,11 @@ h1 { font-size: 1.2rem; font-weight: 600; }
 .badge-keep { background: rgba(63, 185, 80, 0.18); color: var(--success); border: 1px solid rgba(63, 185, 80, 0.5); }
 .badge-partial { background: rgba(210, 153, 34, 0.18); color: var(--warning); border: 1px solid rgba(210, 153, 34, 0.5); }
 .badge-trash { background: rgba(248, 81, 73, 0.16); color: var(--danger); border: 1px solid rgba(248, 81, 73, 0.45); }
+.armor-stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin-bottom: 12px; }
+.armor-stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; }
+.armor-stat-val { font-size: 1.15rem; font-weight: 700; }
+.stat-waste-warn { color: var(--warning); font-size: 0.78rem; font-weight: 600; }
+.stat-waste-ok { color: var(--success); font-size: 0.78rem; }
+.sets-box { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px; margin-bottom: 12px; }
+.set-row { margin: 4px 0; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .hidden { display: none; }

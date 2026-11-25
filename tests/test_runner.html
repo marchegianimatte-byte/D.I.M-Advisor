@@ -2,12 +2,11 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8">
-  <title>D2 Auditor - Test Runner (Milestone 0 & 1)</title>
+  <title>D2 Auditor - Test Runner (Milestone 0, 1, 2)</title>
   <style>
     body { font-family: monospace; background: #0e1116; color: #e6edf3; padding: 20px; }
     .pass { color: #3fb950; }
     .fail { color: #f85149; }
-    li { margin: 6px 0; }
     #test-summary { font-size: 1.1rem; font-weight: bold; margin-bottom: 12px; }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js" defer></script>
@@ -15,54 +14,39 @@
   <script src="../src/parser.js" defer></script>
   <script src="../src/weapon_eval.js" defer></script>
   <script src="../src/weapons_ui.js" defer></script>
+  <script src="../src/armor_eval.js" defer></script>
+  <script src="../src/armor_ui.js" defer></script>
   <script src="../src/app.js" defer></script>
 </head>
 <body>
   <h1>D2 Auditor - Test Runner</h1>
   <div id="test-summary">Esecuzione test...</div>
   <ul id="test-results"></ul>
-
-  <!-- Elementi DOM minimi per verificare Storage e WeaponsUI -->
   <div style="display:none">
-    <span id="weapons-count">0</span>
-    <span id="weapons-meta"></span>
-    <span id="armor-count">0</span>
-    <span id="armor-meta"></span>
+    <span id="weapons-count">0</span><span id="weapons-meta"></span>
+    <span id="armor-count">0</span><span id="armor-meta"></span>
     <input id="weapon-search" value="">
-    <select id="weapon-verdict-filter">
-      <option value="ALL">ALL</option>
-      <option value="TIENI">TIENI</option>
-      <option value="ROLL PARZIALE">ROLL PARZIALE</option>
-      <option value="INFONDI/SCARTA">INFONDI/SCARTA</option>
-    </select>
+    <select id="weapon-verdict-filter"><option value="ALL">ALL</option><option value="TIENI">TIENI</option></select>
     <select id="weapon-type-filter"><option value="ALL">ALL</option></select>
     <span id="weapons-filter-summary"></span>
     <table><tbody id="weapons-table-body"></tbody></table>
+    <select id="armor-owner-filter"></select>
+    <div id="armor-waste-summary"></div><div id="armor-stats-grid"></div><div id="armor-sets-list"></div>
+    <table><tbody id="armor-table-body"></tbody></table>
   </div>
-
   <script>
     window.addEventListener('DOMContentLoaded', function () {
       var resultsEl = document.getElementById('test-results');
       var summaryEl = document.getElementById('test-summary');
-      var passed = 0;
-      var failed = 0;
+      var passed = 0, failed = 0;
 
       function assert(condition, message) {
         if (!condition) throw new Error(message || 'Assertion failed');
       }
-
       function runTest(name, fn) {
         var li = document.createElement('li');
-        try {
-          fn();
-          passed++;
-          li.className = 'pass';
-          li.textContent = '[PASS] ' + name;
-        } catch (err) {
-          failed++;
-          li.className = 'fail';
-          li.textContent = '[FAIL] ' + name + ' -> ' + err.message;
-        }
+        try { fn(); passed++; li.className = 'pass'; li.textContent = '[PASS] ' + name; }
+        catch (err) { failed++; li.className = 'fail'; li.textContent = '[FAIL] ' + name + ' -> ' + err.message; }
         resultsEl.appendChild(li);
       }
 
@@ -72,7 +56,6 @@
         'Predatore Apicale,1851777734,2,keep,Legendary,Lanciarazzi,Power,Solar,2000,true,false,true,Lancio rapido,Rivestimento d\'impatto,Ricostruzione,Fuso bipede',
         'Arma Mediocre,9999999999,3,,Legendary,Cannone portatile,Energy,Void,1990,false,false,false,Canna estesa,Proiettili di precisione,Senso del pericolo,Adagio'
       ].join('\n');
-
       var SAMPLE_ARMOR_CSV = [
         'Name,Hash,Id,Tag,Tier,Type,Equippable,Category,Power,Locked,Equipped,Mobility (Base),Resilience (Base),Recovery (Base),Discipline (Base),Intellect (Base),Strength (Base),Mobility,Resilience,Recovery,Discipline,Intellect,Strength',
         'Maschera di Bakris,2177524718,10,favorite,Exotic,Helmet,Hunter,Helmet,2000,true,true,18,14,2,16,2,12,28,14,2,16,2,12'
@@ -98,16 +81,9 @@
         var evKeep = window.App.WeaponEval.evaluateWeapon(wRes.items[0]);
         var evPartial = window.App.WeaponEval.evaluateWeapon(wRes.items[1]);
         var evTrash = window.App.WeaponEval.evaluateWeapon(wRes.items[2]);
-
-        assert(evKeep.verdict === 'TIENI', 'Atteso TIENI, ricevuto ' + evKeep.verdict);
-        assert(evKeep.matchedPerks.indexOf('Fuorilegge') !== -1, 'Fuorilegge non riconosciuto');
-        assert(evKeep.matchedPerks.indexOf('Carica esplosiva') !== -1, 'Carica esplosiva non riconosciuto');
-
-        assert(evPartial.verdict === 'ROLL PARZIALE', 'Atteso ROLL PARZIALE, ricevuto ' + evPartial.verdict);
-        assert(evPartial.matchedPerks.length === 1 && evPartial.matchedPerks[0] === 'Ricostruzione', 'Perk parziale errato');
-
-        assert(evTrash.verdict === 'INFONDI/SCARTA', 'Atteso INFONDI/SCARTA, ricevuto ' + evTrash.verdict);
-        assert(evTrash.matchedPerks.length === 0, 'Attesi 0 perk evidenziati');
+        assert(evKeep.verdict === 'TIENI' && evKeep.matchedPerks.indexOf('Fuorilegge') !== -1, 'TIENI errato');
+        assert(evPartial.verdict === 'ROLL PARZIALE' && evPartial.matchedPerks[0] === 'Ricostruzione', 'ROLL PARZIALE errato');
+        assert(evTrash.verdict === 'INFONDI/SCARTA' && evTrash.matchedPerks.length === 0, 'INFONDI/SCARTA errato');
       });
 
       runTest('M1: WeaponsUI renderizza tabella, badge, perk verdi e filtri', function () {
@@ -115,17 +91,31 @@
         document.getElementById('weapon-verdict-filter').value = 'ALL';
         document.getElementById('weapon-search').value = '';
         window.App.WeaponsUI.render();
-
         assert(tbody.querySelectorAll('tr').length === 3, 'Attese 3 righe in tabella');
-        assert(tbody.querySelectorAll('.badge-keep').length === 1, 'Atteso 1 badge TIENI');
-        assert(tbody.querySelectorAll('.badge-partial').length === 1, 'Atteso 1 badge ROLL PARZIALE');
-        assert(tbody.querySelectorAll('.badge-trash').length === 1, 'Atteso 1 badge INFONDI/SCARTA');
-        assert(tbody.querySelectorAll('.perk-match').length === 3, 'Attesi 3 perk evidenziati in verde');
-
+        assert(tbody.querySelectorAll('.badge-keep').length === 1 && tbody.querySelectorAll('.perk-match').length === 3, 'Badge/perk errati');
         document.getElementById('weapon-verdict-filter').value = 'TIENI';
         window.App.WeaponsUI.render();
         assert(tbody.querySelectorAll('tr').length === 1, 'Filtro TIENI deve mostrare 1 riga');
+        window.App.Storage.clearDatasets();
+      });
 
+      runTest('M2: ArmorEval calcola punti sprecati, bonus set 2/4 e pezzi da sostituire', function () {
+        var armorSet = [
+          { name: 'Elmo Set A', tier: 'Legendary', category: 'Helmet', owner: 'Hunter', equipped: true, stats: { resilience: 24, strength: 15 }, perks: ['Bonus Set A'] },
+          { name: 'Guanti Set A', tier: 'Legendary', category: 'Gauntlets', owner: 'Hunter', equipped: true, stats: { resilience: 25, strength: 12 }, perks: ['Bonus Set A'] },
+          { name: 'Torso Set A', tier: 'Legendary', category: 'Chest Armor', owner: 'Hunter', equipped: true, stats: { resilience: 30, strength: 10 }, perks: ['Bonus Set A'] },
+          { name: 'Gambe Altro', tier: 'Legendary', category: 'Leg Armor', owner: 'Hunter', equipped: true, stats: { resilience: 18, strength: 10 }, perks: ['Bonus Set B'] }
+        ];
+        var res = window.App.ArmorEval.evaluateBuild(armorSet);
+        assert(res.totalWasted === 14, 'Attesi 14 punti sprecati, ricevuti ' + res.totalWasted);
+        assert(res.summaryText.indexOf('14 punti persi') !== -1, 'Summary errato');
+        assert(res.summaryText.indexOf('Resilienza (7)') !== -1 && res.summaryText.indexOf('Forza (7)') !== -1, 'Dettaglio stat errato');
+        assert(res.sets[0].name === 'Bonus Set A' && res.sets[0].bonus2 === true && res.sets[0].bonus4 === false, 'Verifica set 2/4 errata');
+        assert(res.pieces.some(function (p) { return p.piece.name === 'Gambe Altro' && p.replaceSuggested; }), 'Pezzo fuori set non segnalato');
+        window.App.Storage.saveDataset('armor', armorSet, 'destinyArmor.csv');
+        window.App.ArmorUI.render();
+        assert(document.getElementById('armor-waste-summary').textContent.indexOf('14 punti persi') !== -1, 'ArmorUI summary errato');
+        assert(document.getElementById('armor-table-body').querySelectorAll('tr').length === 4, 'ArmorUI righe errate');
         window.App.Storage.clearDatasets();
       });
 

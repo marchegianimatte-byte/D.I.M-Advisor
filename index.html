@@ -10,6 +10,8 @@
   <script src="src/parser.js" defer></script>
   <script src="src/weapon_eval.js" defer></script>
   <script src="src/weapons_ui.js" defer></script>
+  <script src="src/armor_eval.js" defer></script>
+  <script src="src/armor_ui.js" defer></script>
   <script src="src/app.js" defer></script>
 </head>
 <body>
@@ -82,7 +84,28 @@
     </section>
 
     <section id="tab-armor" class="tab-panel hidden">
-      <p class="placeholder-note">Audit Build Armature disponibile nella Milestone 2.</p>
+      <div class="filters-bar">
+        <label class="sub-meta" for="armor-owner-filter">Personaggio:</label>
+        <select id="armor-owner-filter" class="input"></select>
+      </div>
+      <div id="armor-waste-summary" class="status-bar">Carica destinyArmor.csv per analizzare la build.</div>
+      <div id="armor-stats-grid" class="armor-stats-grid"></div>
+      <div id="armor-sets-list" class="sets-box"></div>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Pezzo</th>
+              <th>Slot</th>
+              <th>Set</th>
+              <th>Suggerimento</th>
+            </tr>
+          </thead>
+          <tbody id="armor-table-body">
+            <tr><td colspan="4" class="empty-cell">Nessun pezzo equipaggiato.</td></tr>
+          </tbody>
+        </table>
+      </div>
     </section>
 
     <section id="tab-rules" class="tab-panel hidden">
