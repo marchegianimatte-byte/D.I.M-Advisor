@@ -93,6 +93,7 @@
       <div class="filters-bar">
         <label class="sub-meta" for="armor-owner-filter">Personaggio:</label>
         <select id="armor-owner-filter" class="input"></select>
+        <label class="toggle-label"><input id="armor-include-mods" type="checkbox" checked> Includi mod e Masterwork</label>
       </div>
       <div id="armor-waste-summary" class="status-bar">Carica destinyArmor.csv per analizzare la build.</div>
       <div id="armor-stats-grid" class="armor-stats-grid"></div>
@@ -104,11 +105,12 @@
               <th>Pezzo</th>
               <th>Slot</th>
               <th>Set</th>
+              <th>Mod</th>
               <th>Suggerimento</th>
             </tr>
           </thead>
           <tbody id="armor-table-body">
-            <tr><td colspan="4" class="empty-cell">Nessun pezzo equipaggiato.</td></tr>
+            <tr><td colspan="5" class="empty-cell">Nessun pezzo equipaggiato.</td></tr>
           </tbody>
         </table>
       </div>

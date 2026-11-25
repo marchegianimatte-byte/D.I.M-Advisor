@@ -33,6 +33,7 @@
     <span id="weapons-filter-summary"></span>
     <table><tbody id="weapons-table-body"></tbody></table>
     <select id="armor-owner-filter"></select>
+    <input id="armor-include-mods" type="checkbox" checked>
     <div id="armor-waste-summary"></div><div id="armor-stats-grid"></div><div id="armor-sets-list"></div>
     <table><tbody id="armor-table-body"></tbody></table>
     <div id="rules-armor-targets"></div><select id="rules-archetype-select"></select><div id="rules-combos-list"></div>
@@ -63,12 +64,12 @@
       ].join('\n');
 
       var SAMPLE_ARMOR_CSV = [
-        'Name,Hash,Id,Tag,Tier,Type,Equippable,Category,Power,Locked,Equipped,Health (Base),Melee (Base),Grenade (Base),Super (Base),Class (Base),Weapons (Base),Health,Melee,Grenade,Super,Class,Weapons',
-        'Maschera di Bakris,2177524718,10,favorite,Exotic,Helmet,Hunter,Helmet,2000,true,true,18,14,2,16,2,12,28,14,2,16,2,12',
-        'Elmo Inutile,2177524719,11,,Legendary,Helmet,Hunter,Helmet,1990,false,false,10,10,10,10,10,10,10,10,10,10,10,10'
+        'Name,Hash,Id,Tag,Tier,Rarity,Type,Equippable,Category,Power,Locked,Equipped,Health (Base),Melee (Base),Grenade (Base),Super (Base),Class (Base),Weapons (Base),Health,Melee,Grenade,Super,Class,Weapons,Perks 0,Perks 1',
+        'Maschera di Bakris,2177524718,10,favorite,5,Esotica,Helmet,Hunter,Helmet,2000,true,true,18,14,2,16,2,12,28,14,2,16,2,12,Salute +10*,Doratura crescente',
+        'Elmo Inutile,2177524719,11,,5,Leggendaria,Helmet,Hunter,Helmet,1990,false,false,10,10,10,10,10,10,10,10,10,10,10,10,,'
       ].join('\n');
 
-      runTest('M0/M4: Parser estrae intrinsic (Perks 0), filtra perk non funzionali e tiene solo armature equipaggiate', function () {
+      runTest('M0/M4/M5: Parser estrae intrinsic, rarity, baseStats, mods e tiene solo armature equipaggiate', function () {
         var wRes = window.App.Parser.parseAndNormalize(SAMPLE_WEAPONS_CSV, 'destinyWeapons.csv');
         var aRes = window.App.Parser.parseAndNormalize(SAMPLE_ARMOR_CSV, 'destinyArmor.csv');
         assert(wRes.items.length === 4, 'Armi attese 4');
@@ -78,6 +79,9 @@
         assert(wRes.items[0].perks.join(' ').indexOf('Livello 10') === -1, 'Livello non filtrato');
         assert(wRes.items[1].perks.join(' ').indexOf('Tracciatore') === -1, 'Tracciatore non filtrato');
         assert(aRes.items.length === 1 && aRes.items[0].name === 'Maschera di Bakris', 'Deve restare solo armatura equipaggiata');
+        assert(aRes.items[0].rarity === 'Esotica', 'rarity non estratta');
+        assert(aRes.items[0].baseStats.health === 18 && aRes.items[0].stats.health === 28, 'baseStats/stats errati');
+        assert(aRes.items[0].mods.length === 1 && aRes.items[0].mods[0] === 'Salute +10', 'Doratura crescente non filtrata da mods');
       });
 
       runTest('M1/M4: WeaponEval distingue PvE vs PvP e raggruppa per Name normalizzato + Type', function () {
@@ -127,17 +131,22 @@
         assert(drawer.querySelectorAll('.dup-item').length === 2, 'Drawer deve mostrare 2 copie');
       });
 
-      runTest('M2/M4: ArmorEval usa le 6 statistiche attuali e nessun contatore copie', function () {
+      runTest('M2/M4: ArmorEval usa le 6 statistiche attuali, esclude Exotic dai set e usa OK/OTTIMIZZABILE/SOSTITUISCI', function () {
         var armorSet = [
-          { name: 'Elmo Set A', tier: 'Legendary', category: 'Helmet', owner: 'Hunter', equipped: true, stats: { health: 24, weapons: 15 }, perks: ['Bonus Set A'] },
-          { name: 'Guanti Set A', tier: 'Legendary', category: 'Gauntlets', owner: 'Hunter', equipped: true, stats: { health: 25, weapons: 12 }, perks: ['Bonus Set A'] },
-          { name: 'Torso Set A', tier: 'Legendary', category: 'Chest Armor', owner: 'Hunter', equipped: true, stats: { health: 30, weapons: 10 }, perks: ['Bonus Set A'] },
-          { name: 'Gambe Altro', tier: 'Legendary', category: 'Leg Armor', owner: 'Hunter', equipped: true, stats: { health: 18, weapons: 10 }, perks: ['Bonus Set B'] }
+          { name: 'Elmo Set A', tier: '5', category: 'Helmet', owner: 'Hunter', equipped: true, stats: { health: 24, weapons: 15 }, perks: ['Bonus Set A'] },
+          { name: 'Guanti Set A', tier: '5', category: 'Gauntlets', owner: 'Hunter', equipped: true, stats: { health: 25, weapons: 12 }, perks: ['Bonus Set A'] },
+          { name: 'Torso Set A', tier: '5', category: 'Chest Armor', owner: 'Hunter', equipped: true, stats: { health: 30, weapons: 10 }, perks: ['Bonus Set A'] },
+          { name: 'Gambe Set A', tier: '5', category: 'Leg Armor', owner: 'Hunter', equipped: true, stats: { health: 18, weapons: 10 }, perks: ['Bonus Set A'] },
+          { name: 'Stoicismo', tier: '5', rarity: 'Esotica', category: 'ClassItem', owner: 'Hunter', equipped: true, stats: { health: 10, weapons: 10 }, perks: ['Spirito di Inmost Light'], mods: ['Potenziamento armatura', 'Fonte di classe'] }
         ];
         var res = window.App.ArmorEval.evaluateBuild(armorSet);
-        assert(res.totalWasted === 14 && res.summaryText.indexOf('Salute (7)') !== -1 && res.summaryText.indexOf('Armi (7)') !== -1, 'Calcolo 6 stat errato');
+        assert(res.sets.length === 1 && res.sets[0].count === 4 && res.sets[0].bonus4 === true, 'Exotic/Stoicismo non deve alterare conteggio set 4/4');
+        assert(res.pieces.every(function (p) { return p.verdict === 'OTTIMIZZABILE'; }), 'Set completo con sprechi deve dare OTTIMIZZABILE');
         window.App.Storage.saveDataset('armor', armorSet, 'destinyArmor.csv');
         window.App.ArmorUI.render();
+        assert(document.getElementById('armor-table-body').innerHTML.indexOf('Tier 5') !== -1, 'Tier 5 mancante');
+        assert(document.getElementById('armor-table-body').innerHTML.indexOf('Potenziamento armatura') === -1, 'Nome bonus set deve essere escluso da MOD');
+        assert(document.getElementById('armor-table-body').innerHTML.indexOf('Fonte di classe') === -1, 'Fonte di classe deve essere escluso da MOD');
         assert(document.getElementById('armor-table-body').querySelectorAll('.copy-toggle-btn').length === 0, 'Nessun contatore copie sotto armature');
       });
 
@@ -156,6 +165,27 @@
         inp.dispatchEvent(new Event('input'));
         assert(document.getElementById('armor-stats-grid').innerHTML.indexOf('Target OK') !== -1, 'Badge Armature non aggiornato');
         window.App.Storage.resetRules();
+        window.App.Storage.clearDatasets();
+      });
+
+      runTest('M5: ArmorEval segnala sprechi mod +5/+10/tuning e toggle baseStats aggiorna la UI', function () {
+        var armorSet = [
+          { name: 'Elmo', tier: '5', category: 'Helmet', owner: 'Hunter', equipped: true, baseStats: { health: 20, class: 20 }, stats: { health: 25, class: 20 }, mods: ['Salute +5'] },
+          { name: 'Guanti', tier: '5', category: 'Gauntlets', owner: 'Hunter', equipped: true, baseStats: { health: 21, class: 20 }, stats: { health: 21, class: 20 }, mods: ['Salute +10'] },
+          { name: 'Torso', tier: '5', category: 'Chest Armor', owner: 'Hunter', equipped: true, baseStats: { health: 20, class: 20 }, stats: { health: 20, class: 20 }, mods: [] },
+          { name: 'Gambe', tier: '5', category: 'Leg Armor', owner: 'Hunter', equipped: true, baseStats: { health: 20, class: 24 }, stats: { health: 20, class: 19 }, mods: ['+5 Armi / -5 Classe'] }
+        ];
+        // Con mod: health=86 (resto 6 -> sprecata), tuning -5 Classe su 24->19 (perde tier -> sprecata)
+        window.App.Storage.saveDataset('armor', armorSet, 'destinyArmor.csv');
+        var toggle = document.getElementById('armor-include-mods');
+        toggle.checked = true;
+        window.App.ArmorUI.render();
+        assert(document.getElementById('armor-stats-grid').textContent.indexOf('86') !== -1, 'Totale con mod atteso 86');
+        assert(document.getElementById('armor-table-body').querySelectorAll('.mod-waste').length >= 2, 'Mod stat/tuning sprecate non segnalate');
+
+        toggle.checked = false;
+        toggle.dispatchEvent(new Event('change'));
+        assert(document.getElementById('armor-stats-grid').textContent.indexOf('81') !== -1, 'Totale baseStats atteso 81');
         window.App.Storage.clearDatasets();
       });
 

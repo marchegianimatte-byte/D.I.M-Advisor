@@ -6,6 +6,7 @@
   var ARMOR_CATEGORIES = ['Helmet', 'Gauntlets', 'Chest Armor', 'Leg Armor', 'ClassItem', 'Class Armor'];
   var ARMOR_STAT_KEYS = ['Health', 'Melee', 'Grenade', 'Super', 'Class', 'Weapons'];
   var IGNORED_PERK_RE = /^(livello\s|conta-uccisioni|kill tracker|tracciatore)/i;
+  var IGNORED_MOD_RE = /^(spirito di\s|spirito del\s|vincolo del cuore|potenziamento armatura|fonte di classe|doratura crescente)|(\bornamento\b|\bornament\b|\bshader\b|\brivestimento\b)/i;
 
   function extractPerks(row, skipZero) {
     var perks = [];
@@ -59,6 +60,7 @@
       name: row.Name || '',
       tag: row.Tag || '',
       tier: row.Tier || '',
+      rarity: row.Rarity || '',
       type: row.Type || '',
       category: row.Category || '',
       element: row.Element || row.Dmg || '',
@@ -73,19 +75,22 @@
   }
 
   function normalizeArmor(row) {
-    var stats = {};
+    var stats = {}, baseStats = {};
     for (var i = 0; i < ARMOR_STAT_KEYS.length; i++) {
-      var stat = ARMOR_STAT_KEYS[i];
-      if (row[stat] !== undefined) stats[stat.toLowerCase()] = toNumber(row[stat]);
-      var baseKey = stat + ' (Base)';
-      if (row[baseKey] !== undefined) stats[stat.toLowerCase() + '_base'] = toNumber(row[baseKey]);
+      var stat = ARMOR_STAT_KEYS[i], key = stat.toLowerCase(), baseKey = stat + ' (Base)';
+      if (row[stat] !== undefined) stats[key] = toNumber(row[stat]);
+      if (row[baseKey] !== undefined) baseStats[key] = toNumber(row[baseKey]);
     }
+    var rawPerks = extractPerks(row, false);
+    var mods = rawPerks.map(function (p) { return p.replace(/\*+$/, '').trim(); })
+      .filter(function (m) { return m && !IGNORED_MOD_RE.test(m); });
     return {
       id: row.Id || '',
       hash: row.Hash || '',
       name: row.Name || '',
       tag: row.Tag || '',
       tier: row.Tier || '',
+      rarity: row.Rarity || '',
       type: row.Type || '',
       equippable: row.Equippable || '',
       category: row.Category || '',
@@ -94,7 +99,9 @@
       locked: toBool(row.Locked),
       equipped: toBool(row.Equipped),
       stats: stats,
-      perks: extractPerks(row)
+      baseStats: baseStats,
+      mods: mods,
+      perks: rawPerks
     };
   }
 

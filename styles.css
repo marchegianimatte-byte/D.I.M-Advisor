@@ -122,4 +122,6 @@ h1 { font-size: 1.2rem; font-weight: 600; }
 .dup-drawer { display: flex; flex-direction: column; gap: 8px; padding: 6px 10px; background: var(--bg); border-left: 3px solid var(--accent); }
 .dup-item { display: flex; flex-direction: column; gap: 4px; }
 .mode-pill { display: inline-block; padding: 1px 6px; border-radius: 4px; font-size: 0.7rem; background: var(--surface); border: 1px solid var(--border); color: var(--accent); }
+.toggle-label { display: inline-flex; align-items: center; gap: 6px; font-size: 0.82rem; color: var(--text); cursor: pointer; }
+.mod-waste { background: rgba(248, 81, 73, 0.16); border-color: var(--danger); color: var(--danger); font-weight: 600; }
 .hidden { display: none; }

@@ -63,23 +63,49 @@
     }).join('');
   }
 
+  function formatTier(tier) {
+    var n = Number(tier);
+    return (!isNaN(n) && n > 0) ? ('Tier ' + n) : '';
+  }
+
+  function renderModsHtml(modsAnalysis, setName) {
+    var filtered = (modsAnalysis || []).filter(function (m) {
+      if (!m || !m.name) return false;
+      if (setName && m.name.toLowerCase() === setName.toLowerCase()) return false;
+      return !/^(spirito di\s|spirito del\s|vincolo del cuore|potenziamento armatura|fonte di classe|doratura crescente)|(\bornamento\b|\bornament\b|\bshader\b|\brivestimento\b)/i.test(m.name);
+    });
+    if (filtered.length === 0) return '<span class="sub-meta">-</span>';
+    return '<div class="perks-cell">' + filtered.map(function (m) {
+      if (m.wasted) {
+        return '<span class="perk-pill mod-waste" title="' + escapeHtml(m.reason) + '">' + escapeHtml(m.name) + ' (' + escapeHtml(m.reason) + ')</span>';
+      }
+      var cls = m.isStatMod ? 'perk-pill perk-match' : 'perk-pill';
+      return '<span class="' + cls + '">' + escapeHtml(m.name) + '</span>';
+    }).join('') + '</div>';
+  }
+
+  function verdictBadge(verdict) {
+    if (verdict === 'SOSTITUISCI') return '<span class="badge badge-trash">SOSTITUISCI</span>';
+    if (verdict === 'OTTIMIZZABILE') return '<span class="badge badge-partial">OTTIMIZZABILE</span>';
+    return '<span class="badge badge-keep">OK</span>';
+  }
+
   function renderPieces(pieceAnalysis) {
     var tbody = document.getElementById('armor-table-body');
     if (!tbody) return;
     if (!pieceAnalysis || pieceAnalysis.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="4" class="empty-cell">Nessun pezzo equipaggiato trovato.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="5" class="empty-cell">Nessun pezzo equipaggiato trovato.</td></tr>';
       return;
     }
     tbody.innerHTML = pieceAnalysis.map(function (entry) {
       var p = entry.piece;
-      var badge = entry.replaceSuggested
-        ? '<span class="badge badge-partial">SOSTITUISCI</span>'
-        : '<span class="badge badge-keep">OK</span>';
+      var tierLabel = formatTier(p.tier);
       return '<tr>' +
-        '<td><strong>' + escapeHtml(p.name) + '</strong><div class="sub-meta">' + escapeHtml(p.tier) + '</div></td>' +
+        '<td><strong>' + escapeHtml(p.name) + '</strong>' + (tierLabel ? '<div class="sub-meta">' + escapeHtml(tierLabel) + '</div>' : '') + '</td>' +
         '<td>' + escapeHtml(p.category || p.type) + '</td>' +
         '<td>' + escapeHtml(entry.setName || '-') + '</td>' +
-        '<td>' + badge + '<div class="sub-meta">' + escapeHtml(entry.reason) + '</div></td>' +
+        '<td>' + renderModsHtml(entry.modsAnalysis, entry.setName) + '</td>' +
+        '<td>' + verdictBadge(entry.verdict) + '<div class="sub-meta">' + escapeHtml(entry.reason) + '</div></td>' +
       '</tr>';
     }).join('');
   }
@@ -103,8 +129,10 @@
       return;
     }
 
+    var toggleEl = document.getElementById('armor-include-mods');
+    var includeMods = toggleEl ? toggleEl.checked : true;
     var armorRules = (App.Storage && App.Storage.loadRules) ? App.Storage.loadRules().armor : null;
-    var result = App.ArmorEval.evaluateBuild(selectedPieces, armorRules);
+    var result = App.ArmorEval.evaluateBuild(selectedPieces, armorRules, { includeMods: includeMods });
     summaryEl.textContent = result.summaryText;
     summaryEl.className = 'status-bar ' + (result.totalWasted === 0 ? 'ok' : 'error');
     renderStats(result.stats);
@@ -114,7 +142,9 @@
 
   function init() {
     var select = document.getElementById('armor-owner-filter');
+    var toggle = document.getElementById('armor-include-mods');
     if (select) select.addEventListener('change', render);
+    if (toggle) toggle.addEventListener('change', render);
   }
 
   document.addEventListener('DOMContentLoaded', init);
