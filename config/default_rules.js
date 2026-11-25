@@ -111,6 +111,16 @@
           ]
         }
       }
+    },
+    armor: {
+      statTargets: {
+        mobility: 30,
+        resilience: 100,
+        recovery: 70,
+        discipline: 100,
+        intellect: 30,
+        strength: 30
+      }
     }
   };
 })(window);

@@ -2,7 +2,32 @@
   'use strict';
 
   var App = global.App = global.App || {};
-  var STORAGE_KEYS = { weapons: 'd2_auditor_weapons', armor: 'd2_auditor_armor' };
+  var STORAGE_KEYS = { weapons: 'd2_auditor_weapons', armor: 'd2_auditor_armor', rules: 'd2_auditor_rules' };
+
+  function cloneDefaultRules() {
+    return global.JSON.parse(global.JSON.stringify(App.DEFAULT_RULES || { weapons: {}, armor: { statTargets: {} } }));
+  }
+
+  function loadRules() {
+    var raw = global.localStorage.getItem(STORAGE_KEYS.rules);
+    if (!raw) return cloneDefaultRules();
+    try { return JSON.parse(raw); } catch (e) { return cloneDefaultRules(); }
+  }
+
+  function refreshAllViews() {
+    if (App.WeaponsUI && typeof App.WeaponsUI.render === 'function') App.WeaponsUI.render();
+    if (App.ArmorUI && typeof App.ArmorUI.render === 'function') App.ArmorUI.render();
+  }
+
+  function saveRules(rulesObj) {
+    global.localStorage.setItem(STORAGE_KEYS.rules, JSON.stringify(rulesObj));
+    refreshAllViews();
+  }
+
+  function resetRules() {
+    global.localStorage.removeItem(STORAGE_KEYS.rules);
+    refreshAllViews();
+  }
 
   function saveDataset(type, items, filename) {
     var key = STORAGE_KEYS[type];
@@ -38,8 +63,7 @@
     setText('weapons-meta', formatMeta(weapons));
     setText('armor-count', armor && armor.items ? String(armor.items.length) : '0');
     setText('armor-meta', formatMeta(armor));
-    if (App.WeaponsUI && typeof App.WeaponsUI.render === 'function') App.WeaponsUI.render();
-    if (App.ArmorUI && typeof App.ArmorUI.render === 'function') App.ArmorUI.render();
+    refreshAllViews();
   }
 
   function setStatus(message, kind) {
@@ -111,5 +135,9 @@
   }
 
   document.addEventListener('DOMContentLoaded', initUI);
-  App.Storage = { STORAGE_KEYS: STORAGE_KEYS, saveDataset: saveDataset, loadDataset: loadDataset, clearDatasets: clearDatasets, renderCounts: renderCounts };
+  App.Storage = {
+    STORAGE_KEYS: STORAGE_KEYS, saveDataset: saveDataset, loadDataset: loadDataset,
+    clearDatasets: clearDatasets, renderCounts: renderCounts,
+    loadRules: loadRules, saveRules: saveRules, resetRules: resetRules
+  };
 })(window);

@@ -19,6 +19,7 @@ d2-auditor/
 │   ├── weapon_eval.js  # Logica pura: calcolo score perk e sinergie
 │   ├── weapons_ui.js   # Rendering tabella, filtri e badge della scheda Armi
 │   ├── armor_eval.js   # Logica pura: calcolo punti sprecati e verifica bonus set
-│   └── armor_ui.js     # Rendering riepilogo, statistiche, set e tabella Build Armature
+│   ├── armor_ui.js     # Rendering riepilogo, statistiche, set e tabella Build Armature
+│   └── rules_ui.js     # Editor regole perk/statistiche, export JSON e ripristino default
 └── tests/
     └── test_runner.html # Pagina di test unitari eseguiti direttamente nel browser

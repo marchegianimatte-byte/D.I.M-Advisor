@@ -16,6 +16,7 @@
   <script src="../src/weapons_ui.js" defer></script>
   <script src="../src/armor_eval.js" defer></script>
   <script src="../src/armor_ui.js" defer></script>
+  <script src="../src/rules_ui.js" defer></script>
   <script src="../src/app.js" defer></script>
 </head>
 <body>
@@ -33,6 +34,9 @@
     <select id="armor-owner-filter"></select>
     <div id="armor-waste-summary"></div><div id="armor-stats-grid"></div><div id="armor-sets-list"></div>
     <table><tbody id="armor-table-body"></tbody></table>
+    <div id="rules-armor-targets"></div><select id="rules-archetype-select"></select><div id="rules-combos-list"></div>
+    <input id="new-combo-name"><input id="new-combo-col3"><input id="new-combo-col4">
+    <button id="add-combo-btn"></button><button id="export-rules-btn"></button><button id="reset-rules-btn"></button>
   </div>
   <script>
     window.addEventListener('DOMContentLoaded', function () {
@@ -116,6 +120,24 @@
         window.App.ArmorUI.render();
         assert(document.getElementById('armor-waste-summary').textContent.indexOf('14 punti persi') !== -1, 'ArmorUI summary errato');
         assert(document.getElementById('armor-table-body').querySelectorAll('tr').length === 4, 'ArmorUI righe errate');
+        window.App.Storage.clearDatasets();
+      });
+
+      runTest('M3: RulesUI salva in d2_auditor_rules e aggiorna subito Armi e Armature', function () {
+        window.App.Storage.resetRules();
+        window.App.RulesUI.render();
+        var armorSet = [{ name: 'Elmo', tier: 'Legendary', category: 'Helmet', owner: 'Hunter', equipped: true, stats: { resilience: 95 }, perks: [] }];
+        window.App.Storage.saveDataset('armor', armorSet, 'destinyArmor.csv');
+        window.App.ArmorUI.render();
+        assert(document.getElementById('armor-stats-grid').innerHTML.indexOf('Sotto 100') !== -1, 'Target default 100 atteso');
+
+        var resInput = document.querySelector('#rules-armor-targets input[data-stat-key="resilience"]');
+        resInput.value = '90';
+        resInput.dispatchEvent(new Event('input'));
+        assert(localStorage.getItem('d2_auditor_rules') !== null, 'd2_auditor_rules non salvato');
+        assert(document.getElementById('armor-stats-grid').innerHTML.indexOf('Target OK') !== -1, 'Badge Armature non aggiornato');
+
+        window.App.Storage.resetRules();
         window.App.Storage.clearDatasets();
       });
 

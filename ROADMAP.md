@@ -12,6 +12,6 @@
 - **Obiettivo:** Implementare `src/armor_eval.js` per analizzare i pezzi equipaggiati (o raggruppati per set), calcolando i punti statistica sprecati oltre i multipli di 10 e verificando il raggiungimento dei bonus set (es. 2/4 pezzi).
 - **DoD:** La scheda "Armature" segnala chiaramente il totale dei punti sprecati (es. "14 punti persi tra Resilienza e Forza") e indica quali pezzi sostituire.
 
-## Milestone 3: Editor Regole Integrato [ ]
+## Milestone 3: Editor Regole Integrato [x]
 - **Obiettivo:** Aggiungere una scheda "Regole" nell'interfaccia per modificare i perk ricercati e i target delle statistiche senza dover aprire il codice, salvando tutto in `localStorage` con pulsante di export JSON.
 - **DoD:** Modificando un target statistica dalla UI, i badge nelle schede Armi e Armature si aggiornano istantaneamente.

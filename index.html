@@ -12,6 +12,7 @@
   <script src="src/weapons_ui.js" defer></script>
   <script src="src/armor_eval.js" defer></script>
   <script src="src/armor_ui.js" defer></script>
+  <script src="src/rules_ui.js" defer></script>
   <script src="src/app.js" defer></script>
 </head>
 <body>
@@ -109,7 +110,27 @@
     </section>
 
     <section id="tab-rules" class="tab-panel hidden">
-      <p class="placeholder-note">Editor Regole disponibile nella Milestone 3.</p>
+      <div class="rules-actions">
+        <button id="export-rules-btn" class="btn" type="button">Esporta JSON</button>
+        <button id="reset-rules-btn" class="btn btn-danger" type="button">Ripristina Default</button>
+      </div>
+      <div class="rules-section">
+        <h2>Target Statistiche Armature</h2>
+        <div id="rules-armor-targets" class="rules-targets-grid"></div>
+      </div>
+      <div class="rules-section">
+        <h2>Combinazioni Perk Armi</h2>
+        <div class="filters-bar">
+          <select id="rules-archetype-select" class="input"></select>
+        </div>
+        <div id="rules-combos-list"></div>
+        <div class="filters-bar">
+          <input id="new-combo-name" class="input" type="text" placeholder="Nome combo (es. PvE)">
+          <input id="new-combo-col3" class="input" type="text" placeholder="Col 3 (es. Fuorilegge, Demolitore)">
+          <input id="new-combo-col4" class="input" type="text" placeholder="Col 4 (es. Frenesia, Incandescente)">
+          <button id="add-combo-btn" class="btn" type="button">Aggiungi combo</button>
+        </div>
+      </div>
     </section>
   </div>
 </body>

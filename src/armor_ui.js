@@ -38,9 +38,12 @@
     }
     grid.innerHTML = stats.map(function (s) {
       var cls = s.wasted > 0 ? 'stat-waste-warn' : 'stat-waste-ok';
+      var targetBadge = s.target !== null
+        ? ' <span class="badge ' + (s.targetMet ? 'badge-keep' : 'badge-trash') + '">' + (s.targetMet ? 'Target OK' : 'Sotto ' + s.target) + '</span>'
+        : '';
       return '<div class="armor-stat-card">' +
         '<div class="stat-label">' + escapeHtml(s.label) + '</div>' +
-        '<div class="armor-stat-val">' + s.total + ' <span class="sub-meta">(Tier ' + s.tier + ')</span></div>' +
+        '<div class="armor-stat-val">' + s.total + ' <span class="sub-meta">(Tier ' + s.tier + ')</span>' + targetBadge + '</div>' +
         '<div class="' + cls + '">' + (s.wasted > 0 ? s.wasted + ' sprecati' : '0 sprecati') + '</div>' +
       '</div>';
     }).join('');
@@ -100,7 +103,8 @@
       return;
     }
 
-    var result = App.ArmorEval.evaluateBuild(selectedPieces);
+    var armorRules = (App.Storage && App.Storage.loadRules) ? App.Storage.loadRules().armor : null;
+    var result = App.ArmorEval.evaluateBuild(selectedPieces, armorRules);
     summaryEl.textContent = result.summaryText;
     summaryEl.className = 'status-bar ' + (result.totalWasted === 0 ? 'ok' : 'error');
     renderStats(result.stats);

@@ -59,7 +59,8 @@
     var typeFilter = (document.getElementById('weapon-type-filter') || {}).value || 'ALL';
     var q = search.trim().toLowerCase();
 
-    var evaluated = App.WeaponEval.evaluateAll(weapons);
+    var rules = (App.Storage && App.Storage.loadRules) ? App.Storage.loadRules().weapons : null;
+    var evaluated = App.WeaponEval.evaluateAll(weapons, rules);
     var filtered = evaluated.filter(function (row) {
       var w = row.weapon;
       if (verdictFilter !== 'ALL' && row.eval.verdict !== verdictFilter) return false;
