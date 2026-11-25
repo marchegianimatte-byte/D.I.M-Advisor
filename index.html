@@ -6,7 +6,10 @@
   <title>D2 Auditor - DIM CSV</title>
   <link rel="stylesheet" href="styles.css">
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js" defer></script>
+  <script src="config/default_rules.js" defer></script>
   <script src="src/parser.js" defer></script>
+  <script src="src/weapon_eval.js" defer></script>
+  <script src="src/weapons_ui.js" defer></script>
   <script src="src/app.js" defer></script>
 </head>
 <body>
@@ -14,15 +17,14 @@
     <header>
       <div>
         <h1>D2 Auditor</h1>
-        <p class="subtitle">Importazione locale CSV da Destiny Item Manager</p>
+        <p class="subtitle">Audit locale CSV da Destiny Item Manager</p>
       </div>
       <button id="clear-data-btn" class="btn btn-danger" type="button">Svuota dati salvati</button>
     </header>
 
     <section id="dropzone" class="dropzone" tabindex="0" aria-label="Area trascinamento CSV">
-      <p><strong>Trascina qui</strong> i file <code>destinyWeapons.csv</code> e <code>destinyArmor.csv</code></p>
-      <p>oppure</p>
-      <label class="btn" for="csv-file-input">Seleziona file CSV</label>
+      <p><strong>Trascina qui</strong> i file <code>destinyWeapons.csv</code> e <code>destinyArmor.csv</code> oppure
+      <label class="btn" for="csv-file-input">Seleziona file CSV</label></p>
       <input id="csv-file-input" class="hidden" type="file" accept=".csv,text/csv" multiple>
     </section>
 
@@ -39,9 +41,53 @@
       </div>
     </section>
 
-    <div id="status-bar" class="status-bar" role="status" aria-live="polite">
-      In attesa di file CSV...
-    </div>
+    <div id="status-bar" class="status-bar" role="status" aria-live="polite">In attesa di file CSV...</div>
+
+    <nav class="tabs" aria-label="Schede principali">
+      <button class="tab-btn active" type="button" data-tab="tab-weapons">Armi</button>
+      <button class="tab-btn" type="button" data-tab="tab-armor">Build Armature</button>
+      <button class="tab-btn" type="button" data-tab="tab-rules">Regole</button>
+    </nav>
+
+    <section id="tab-weapons" class="tab-panel">
+      <div class="filters-bar">
+        <input id="weapon-search" class="input" type="search" placeholder="Cerca arma o perk...">
+        <select id="weapon-verdict-filter" class="input">
+          <option value="ALL">Tutti gli esiti</option>
+          <option value="TIENI">TIENI</option>
+          <option value="ROLL PARZIALE">ROLL PARZIALE</option>
+          <option value="INFONDI/SCARTA">INFONDI/SCARTA</option>
+        </select>
+        <select id="weapon-type-filter" class="input">
+          <option value="ALL">Tutti i tipi</option>
+        </select>
+        <span id="weapons-filter-summary" class="filter-summary">Mostrate 0 / 0 armi</span>
+      </div>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Arma</th>
+              <th>Tipo</th>
+              <th>Elem / Potere</th>
+              <th>Perk</th>
+              <th>Esito</th>
+            </tr>
+          </thead>
+          <tbody id="weapons-table-body">
+            <tr><td colspan="5" class="empty-cell">Nessuna arma caricata.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="tab-armor" class="tab-panel hidden">
+      <p class="placeholder-note">Audit Build Armature disponibile nella Milestone 2.</p>
+    </section>
+
+    <section id="tab-rules" class="tab-panel hidden">
+      <p class="placeholder-note">Editor Regole disponibile nella Milestone 3.</p>
+    </section>
   </div>
 </body>
 </html>

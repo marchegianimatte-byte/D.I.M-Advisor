@@ -1,10 +1,10 @@
 # ROADMAP
 
-## Milestone 0: Drag & Drop e Parsing CSV [ ]
+## Milestone 0: Drag & Drop e Parsing CSV [x]
 - **Obiettivo:** Creare `index.html`, `src/app.js` e `src/parser.js` per trascinare `destinyWeapons.csv` e `destinyArmor.csv` nella pagina, salvarli in `localStorage` e mostrare il conteggio degli oggetti caricati.
 - **Definition of Done (DoD):** Trascinando un CSV reale di DIM, la pagina mostra il numero esatto di armi/armature e, ricaricando con `F5`, i dati restano caricati senza doverli reinserire.
 
-## Milestone 1: Audit Rapido Armi [ ]
+## Milestone 1: Audit Rapido Armi [x]
 - **Obiettivo:** Implementare `src/weapon_eval.js` e `config/default_rules.js` per incrociare i perk di ogni arma con le combinazioni desiderate per archetipo.
 - **DoD:** La scheda "Armi" mostra una tabella filtrabile con badge immediati (`TIENI`, `INFONDI/SCARTA`, `ROLL PARZIALE`) e evidenzia in verde i perk che attivano la sinergia.
 

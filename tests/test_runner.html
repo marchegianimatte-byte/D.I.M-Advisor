@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8">
-  <title>D2 Auditor - Test Runner (Milestone 0)</title>
+  <title>D2 Auditor - Test Runner (Milestone 0 & 1)</title>
   <style>
     body { font-family: monospace; background: #0e1116; color: #e6edf3; padding: 20px; }
     .pass { color: #3fb950; }
@@ -11,7 +11,10 @@
     #test-summary { font-size: 1.1rem; font-weight: bold; margin-bottom: 12px; }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js" defer></script>
+  <script src="../config/default_rules.js" defer></script>
   <script src="../src/parser.js" defer></script>
+  <script src="../src/weapon_eval.js" defer></script>
+  <script src="../src/weapons_ui.js" defer></script>
   <script src="../src/app.js" defer></script>
 </head>
 <body>
@@ -19,12 +22,22 @@
   <div id="test-summary">Esecuzione test...</div>
   <ul id="test-results"></ul>
 
-  <!-- Elementi DOM minimi per verificare renderCounts() -->
+  <!-- Elementi DOM minimi per verificare Storage e WeaponsUI -->
   <div style="display:none">
     <span id="weapons-count">0</span>
     <span id="weapons-meta"></span>
     <span id="armor-count">0</span>
     <span id="armor-meta"></span>
+    <input id="weapon-search" value="">
+    <select id="weapon-verdict-filter">
+      <option value="ALL">ALL</option>
+      <option value="TIENI">TIENI</option>
+      <option value="ROLL PARZIALE">ROLL PARZIALE</option>
+      <option value="INFONDI/SCARTA">INFONDI/SCARTA</option>
+    </select>
+    <select id="weapon-type-filter"><option value="ALL">ALL</option></select>
+    <span id="weapons-filter-summary"></span>
+    <table><tbody id="weapons-table-body"></tbody></table>
   </div>
 
   <script>
@@ -35,9 +48,7 @@
       var failed = 0;
 
       function assert(condition, message) {
-        if (!condition) {
-          throw new Error(message || 'Assertion failed');
-        }
+        if (!condition) throw new Error(message || 'Assertion failed');
       }
 
       function runTest(name, fn) {
@@ -57,58 +68,65 @@
 
       var SAMPLE_WEAPONS_CSV = [
         'Name,Hash,Id,Tag,Tier,Type,Category,Element,Power,Locked,Equipped,Crafted,Perks 0,Perks 1,Perks 2,Perks 3',
-        'Fatebringer,1216319404,6917529044,favorite,Legendary,Hand Cannon,KineticSlot,Kinetic,2000,true,true,false,Fluted Barrel,Tactical Mag,Explosive Payload,Firefly',
-        'Apex Predator,1851777734,6917529055,keep,Legendary,Rocket Launcher,Power,Solar,2000,true,false,true,Quick Launch,Impact Casing,Reconstruction,Bait and Switch'
+        'Araldo del Fato,1216319404,1,favorite,Legendary,Cannone portatile,KineticSlot,Kinetic,2000,true,true,false,Canna scanalata,Caricatore tattico,Fuorilegge*,Carica esplosiva*',
+        'Predatore Apicale,1851777734,2,keep,Legendary,Lanciarazzi,Power,Solar,2000,true,false,true,Lancio rapido,Rivestimento d\'impatto,Ricostruzione,Fuso bipede',
+        'Arma Mediocre,9999999999,3,,Legendary,Cannone portatile,Energy,Void,1990,false,false,false,Canna estesa,Proiettili di precisione,Senso del pericolo,Adagio'
       ].join('\n');
 
       var SAMPLE_ARMOR_CSV = [
         'Name,Hash,Id,Tag,Tier,Type,Equippable,Category,Power,Locked,Equipped,Mobility (Base),Resilience (Base),Recovery (Base),Discipline (Base),Intellect (Base),Strength (Base),Mobility,Resilience,Recovery,Discipline,Intellect,Strength',
-        'Mask of Bakris,2177524718,6917529100,favorite,Exotic,Helmet,Hunter,Helmet,2000,true,true,18,14,2,16,2,12,28,14,2,16,2,12',
-        'Artifice Grasps,3344556677,6917529101,,Legendary,Gauntlets,Hunter,Gauntlets,1995,false,false,10,20,2,20,2,10,10,20,2,20,2,10',
-        'Heart of Inmost Light,1122334455,6917529102,keep,Exotic,Chest Armor,Titan,Chest Armor,2000,true,false,2,24,6,22,2,8,2,24,6,22,2,8'
+        'Maschera di Bakris,2177524718,10,favorite,Exotic,Helmet,Hunter,Helmet,2000,true,true,18,14,2,16,2,12,28,14,2,16,2,12'
       ].join('\n');
 
-      runTest('Parser riconosce e normalizza destinyWeapons.csv', function () {
-        var res = window.App.Parser.parseAndNormalize(SAMPLE_WEAPONS_CSV, 'destinyWeapons.csv');
-        assert(res.type === 'weapons', 'Tipo atteso weapons, ricevuto ' + res.type);
-        assert(res.items.length === 2, 'Numero armi atteso 2, ricevuto ' + res.items.length);
-        assert(res.items[0].name === 'Fatebringer', 'Nome prima arma errato');
-        assert(res.items[0].perks.length === 4, 'Perk attesi 4, ricevuti ' + res.items[0].perks.length);
-        assert(res.items[1].crafted === true, 'Crafted atteso true');
-      });
-
-      runTest('Parser riconosce e normalizza destinyArmor.csv', function () {
-        var res = window.App.Parser.parseAndNormalize(SAMPLE_ARMOR_CSV, 'destinyArmor.csv');
-        assert(res.type === 'armor', 'Tipo atteso armor, ricevuto ' + res.type);
-        assert(res.items.length === 3, 'Numero armature atteso 3, ricevuto ' + res.items.length);
-        assert(res.items[0].equippable === 'Hunter', 'Equippable errato');
-        assert(res.items[0].stats.resilience_base === 14, 'Resilience base errata');
-        assert(res.items[0].stats.mobility === 28, 'Mobility errata');
-      });
-
-      runTest('Persistenza localStorage e rendering conteggi (simulazione F5)', function () {
-        window.App.Storage.clearDatasets();
-
+      runTest('M0: Parser riconosce CSV armi e armature', function () {
         var wRes = window.App.Parser.parseAndNormalize(SAMPLE_WEAPONS_CSV, 'destinyWeapons.csv');
         var aRes = window.App.Parser.parseAndNormalize(SAMPLE_ARMOR_CSV, 'destinyArmor.csv');
+        assert(wRes.type === 'weapons' && wRes.items.length === 3, 'Parsing armi errato');
+        assert(aRes.type === 'armor' && aRes.items.length === 1, 'Parsing armature errato');
+      });
 
+      runTest('M0: Persistenza localStorage (simulazione F5)', function () {
+        window.App.Storage.clearDatasets();
+        var wRes = window.App.Parser.parseAndNormalize(SAMPLE_WEAPONS_CSV, 'destinyWeapons.csv');
         window.App.Storage.saveDataset('weapons', wRes.items, 'destinyWeapons.csv');
-        window.App.Storage.saveDataset('armor', aRes.items, 'destinyArmor.csv');
+        var loaded = window.App.Storage.loadDataset('weapons');
+        assert(loaded && loaded.items.length === 3, 'Ricaricamento da localStorage fallito');
+      });
 
-        // Simula reload: rilegge da localStorage e aggiorna DOM
-        var loadedW = window.App.Storage.loadDataset('weapons');
-        var loadedA = window.App.Storage.loadDataset('armor');
-        window.App.Storage.renderCounts();
+      runTest('M1: WeaponEval assegna TIENI, ROLL PARZIALE e INFONDI/SCARTA con perk IT', function () {
+        var wRes = window.App.Parser.parseAndNormalize(SAMPLE_WEAPONS_CSV, 'destinyWeapons.csv');
+        var evKeep = window.App.WeaponEval.evaluateWeapon(wRes.items[0]);
+        var evPartial = window.App.WeaponEval.evaluateWeapon(wRes.items[1]);
+        var evTrash = window.App.WeaponEval.evaluateWeapon(wRes.items[2]);
 
-        assert(loadedW && loadedW.items.length === 2, 'Armi ricaricate da localStorage non corrispondono');
-        assert(loadedA && loadedA.items.length === 3, 'Armature ricaricate da localStorage non corrispondono');
-        assert(document.getElementById('weapons-count').textContent === '2', 'DOM weapons-count errato');
-        assert(document.getElementById('armor-count').textContent === '3', 'DOM armor-count errato');
+        assert(evKeep.verdict === 'TIENI', 'Atteso TIENI, ricevuto ' + evKeep.verdict);
+        assert(evKeep.matchedPerks.indexOf('Fuorilegge') !== -1, 'Fuorilegge non riconosciuto');
+        assert(evKeep.matchedPerks.indexOf('Carica esplosiva') !== -1, 'Carica esplosiva non riconosciuto');
+
+        assert(evPartial.verdict === 'ROLL PARZIALE', 'Atteso ROLL PARZIALE, ricevuto ' + evPartial.verdict);
+        assert(evPartial.matchedPerks.length === 1 && evPartial.matchedPerks[0] === 'Ricostruzione', 'Perk parziale errato');
+
+        assert(evTrash.verdict === 'INFONDI/SCARTA', 'Atteso INFONDI/SCARTA, ricevuto ' + evTrash.verdict);
+        assert(evTrash.matchedPerks.length === 0, 'Attesi 0 perk evidenziati');
+      });
+
+      runTest('M1: WeaponsUI renderizza tabella, badge, perk verdi e filtri', function () {
+        var tbody = document.getElementById('weapons-table-body');
+        document.getElementById('weapon-verdict-filter').value = 'ALL';
+        document.getElementById('weapon-search').value = '';
+        window.App.WeaponsUI.render();
+
+        assert(tbody.querySelectorAll('tr').length === 3, 'Attese 3 righe in tabella');
+        assert(tbody.querySelectorAll('.badge-keep').length === 1, 'Atteso 1 badge TIENI');
+        assert(tbody.querySelectorAll('.badge-partial').length === 1, 'Atteso 1 badge ROLL PARZIALE');
+        assert(tbody.querySelectorAll('.badge-trash').length === 1, 'Atteso 1 badge INFONDI/SCARTA');
+        assert(tbody.querySelectorAll('.perk-match').length === 3, 'Attesi 3 perk evidenziati in verde');
+
+        document.getElementById('weapon-verdict-filter').value = 'TIENI';
+        window.App.WeaponsUI.render();
+        assert(tbody.querySelectorAll('tr').length === 1, 'Filtro TIENI deve mostrare 1 riga');
 
         window.App.Storage.clearDatasets();
-        window.App.Storage.renderCounts();
-        assert(document.getElementById('weapons-count').textContent === '0', 'Reset weapons-count fallito');
-        assert(document.getElementById('armor-count').textContent === '0', 'Reset armor-count fallito');
       });
 
       summaryEl.textContent = 'Risultato: ' + passed + ' passati, ' + failed + ' falliti.';

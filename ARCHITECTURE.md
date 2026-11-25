@@ -17,6 +17,7 @@ d2-auditor/
 │   ├── app.js          # Gestione drag-and-drop CSV, eventi UI e localStorage
 │   ├── parser.js       # Normalizzazione colonne CSV di DIM in oggetti puliti
 │   ├── weapon_eval.js  # Logica pura: calcolo score perk e sinergie
+│   ├── weapons_ui.js   # Rendering tabella, filtri e badge della scheda Armi
 │   └── armor_eval.js   # Logica pura: calcolo punti sprecati e verifica bonus set
 └── tests/
     └── test_runner.html # Pagina di test unitari eseguiti direttamente nel browser
