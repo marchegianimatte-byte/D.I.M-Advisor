@@ -31,6 +31,22 @@
     return String(val).toLowerCase() === 'true';
   }
 
+  function isWishlistMatch(row) {
+    var raw = row.Wishlist !== undefined ? row.Wishlist : (row['Wish List'] !== undefined ? row['Wish List'] : '');
+    return /^(true|1|yes|wish)$/i.test(String(raw || '').trim());
+  }
+
+  function parseWishlistSources(match, note) {
+    if (!match) return [];
+    var sources = [], n = String(note || '').trim();
+    var hasVoltron = /\bvoltron\b|\((pve|pvp)\)|pandapaxxy|mercules/i.test(n);
+    var hasAegis = /\baegis\b/i.test(n) ||
+      (!hasVoltron && /\b(s-tier|a-tier|b-tier|endgame|dps|add\s*clear|rotation|swap|boss|gm|raid)\b/i.test(n));
+    if (hasAegis) sources.push('aegis');
+    if (hasVoltron || sources.length === 0) sources.push('voltron');
+    return sources;
+  }
+
   function detectCsvType(headers, filename) {
     var headerSet = {};
     for (var i = 0; i < headers.length; i++) {
@@ -54,6 +70,9 @@
   function normalizeWeapon(row) {
     var rawIntrinsic = row['Perks 0'] ? String(row['Perks 0']).replace(/\*+$/, '').trim() : '';
     var intrinsic = (rawIntrinsic && !IGNORED_PERK_RE.test(rawIntrinsic)) ? rawIntrinsic : '';
+    var wMatch = isWishlistMatch(row);
+    var wNote = row['Wishlist Note'] !== undefined ? row['Wishlist Note'] : (row['Wish List Note'] !== undefined ? row['Wish List Note'] : '');
+    var cleanNote = wNote ? String(wNote).trim() : '';
     return {
       id: row.Id || '',
       hash: row.Hash || '',
@@ -69,6 +88,9 @@
       locked: toBool(row.Locked),
       equipped: toBool(row.Equipped),
       crafted: toBool(row.Crafted),
+      wishlistMatch: wMatch,
+      wishlistNote: cleanNote,
+      wishlistSources: parseWishlistSources(wMatch, cleanNote),
       intrinsic: intrinsic,
       perks: extractPerks(row, true)
     };

@@ -32,6 +32,35 @@
     return archetypes[key] ? key : 'default';
   }
 
+  function matchSyncedWishlist(weapon, targetMode) {
+    var cache = App.WishlistDB && App.WishlistDB.getMemoryCache ? App.WishlistDB.getMemoryCache() : null;
+    var entries = cache && cache.rulesByItem && weapon && weapon.hash ? cache.rulesByItem[String(weapon.hash)] : null;
+    if (!entries || entries.length === 0) return null;
+
+    var perkSet = {};
+    (weapon.perks || []).forEach(function (p) {
+      var c = stripPerkMarker(p).toLowerCase();
+      if (c) perkSet[c] = true;
+    });
+
+    var sources = [], srcMap = {}, matchedPerks = [];
+    for (var i = 0; i < entries.length; i++) {
+      var e = entries[i];
+      if (targetMode !== 'all' && e.mode && e.mode !== targetMode) continue;
+      var allPresent = true;
+      for (var j = 0; j < e.perks.length; j++) {
+        if (!perkSet[e.perks[j]]) { allPresent = false; break; }
+      }
+      if (!allPresent) continue;
+      (e.sources || []).forEach(function (src) {
+        if (src && !srcMap[src]) { srcMap[src] = true; sources.push(src); }
+      });
+      e.perks.forEach(function (p) { if (matchedPerks.indexOf(p) === -1) matchedPerks.push(p); });
+    }
+    if (sources.length === 0) return null;
+    return { sources: sources, matchedPerks: matchedPerks };
+  }
+
   function evaluateWeapon(weapon, customRules, mode) {
     var rules = customRules || (App.DEFAULT_RULES && App.DEFAULT_RULES.weapons) || {};
     var archetypes = rules.archetypes || {};
@@ -62,6 +91,32 @@
       }
     }
 
+    var synced = matchSyncedWishlist(weapon, targetMode);
+    if (synced) {
+      var mergedMatched = synced.matchedPerks.slice();
+      (bestKeep ? bestKeep.matched : partialMatches).forEach(function (p) {
+        if (mergedMatched.indexOf(p) === -1) mergedMatched.push(p);
+      });
+      return {
+        verdict: 'TIENI',
+        comboName: synced.note || (bestKeep && bestKeep.comboName) || 'Wishlist',
+        matchedPerks: mergedMatched,
+        archetype: archKey,
+        isWishlist: true,
+        wishlistSources: synced.sources
+      };
+    }
+
+    if (weapon && weapon.wishlistMatch === true) {
+      return {
+        verdict: 'TIENI (Wishlist DIM)',
+        comboName: weapon.wishlistNote || (bestKeep && bestKeep.comboName) || 'Wishlist DIM',
+        matchedPerks: bestKeep ? bestKeep.matched : partialMatches,
+        archetype: archKey,
+        isWishlist: true,
+        wishlistSources: weapon.wishlistSources && weapon.wishlistSources.length ? weapon.wishlistSources : ['voltron']
+      };
+    }
     if (bestKeep) return { verdict: 'TIENI', comboName: bestKeep.comboName, matchedPerks: bestKeep.matched, archetype: archKey };
     if (partialMatches.length > 0) return { verdict: 'ROLL PARZIALE', comboName: partialCombo, matchedPerks: partialMatches, archetype: archKey };
     return { verdict: 'INFONDI/SCARTA', comboName: '', matchedPerks: [], archetype: archKey };
@@ -74,7 +129,8 @@
   }
 
   function rankScore(entry) {
-    var base = entry.eval.verdict === 'TIENI' ? 200 : (entry.eval.verdict === 'ROLL PARZIALE' ? 100 : 0);
+    var v = entry.eval.verdict;
+    var base = v === 'TIENI (Wishlist DIM)' ? 300 : (v === 'TIENI' ? 200 : (v === 'ROLL PARZIALE' ? 100 : 0));
     return base + (entry.eval.matchedPerks ? entry.eval.matchedPerks.length : 0);
   }
 
@@ -93,7 +149,20 @@
     });
     return order.map(function (key) {
       var copies = map[key].slice().sort(function (a, b) { return rankScore(b) - rankScore(a); });
-      return { key: key, hash: copies[0].weapon.hash || '', best: copies[0], copies: copies, count: copies.length };
+      var wishlistMatch = false, srcMap = {}, wishlistSources = [];
+      copies.forEach(function (c) {
+        if ((c.weapon && c.weapon.wishlistMatch) || (c.eval && c.eval.isWishlist)) wishlistMatch = true;
+        var srcs = (c.eval && c.eval.wishlistSources) || (c.weapon && c.weapon.wishlistSources) || [];
+        srcs.forEach(function (s) {
+          var low = String(s || '').trim().toLowerCase();
+          if (low && !srcMap[low]) { srcMap[low] = true; wishlistSources.push(low); }
+        });
+      });
+      return {
+        key: key, hash: copies[0].weapon.hash || '', best: copies[0],
+        copies: copies, count: copies.length,
+        wishlistMatch: wishlistMatch, wishlistSources: wishlistSources
+      };
     });
   }
 

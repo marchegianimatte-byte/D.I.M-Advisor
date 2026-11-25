@@ -12,6 +12,8 @@
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js" defer></script>
   <script src="../config/default_rules.js" defer></script>
   <script src="../src/parser.js" defer></script>
+  <script src="../src/wishlist_db.js" defer></script>
+  <script src="../src/wishlist_sync.js" defer></script>
   <script src="../src/weapon_eval.js" defer></script>
   <script src="../src/weapons_ui.js" defer></script>
   <script src="../src/armor_eval.js" defer></script>
@@ -28,8 +30,10 @@
     <span id="armor-count">0</span><span id="armor-meta"></span>
     <input id="weapon-search" value="">
     <select id="weapon-mode-filter"><option value="pve">PvE</option><option value="pvp">PvP</option><option value="all">all</option></select>
-    <select id="weapon-verdict-filter"><option value="ALL">ALL</option><option value="TIENI">TIENI</option></select>
+    <select id="weapon-verdict-filter"><option value="ALL">ALL</option><option value="TIENI (Wishlist DIM)">TIENI (Wishlist DIM)</option><option value="TIENI">TIENI</option></select>
     <select id="weapon-type-filter"><option value="ALL">ALL</option></select>
+    <select id="weapon-wishlist-filter"><option value="all">all</option><option value="wishlist_only">Solo Wishlist</option><option value="aegis">Aegis</option><option value="voltron">Voltron</option></select>
+    <button id="sync-wishlist-btn"></button><span id="wishlist-sync-status"></span>
     <span id="weapons-filter-summary"></span>
     <table><tbody id="weapons-table-body"></tbody></table>
     <select id="armor-owner-filter"></select>
@@ -39,7 +43,8 @@
     <div id="rules-armor-targets"></div><select id="rules-archetype-select"></select><div id="rules-combos-list"></div>
     <input id="new-combo-name"><select id="new-combo-mode"><option value="pve">pve</option><option value="pvp">pvp</option></select>
     <input id="new-combo-col3"><input id="new-combo-col4">
-    <button id="add-combo-btn"></button><button id="export-rules-btn"></button><button id="reset-rules-btn"></button>
+    <input id="import-rules-file" type="file"><input id="import-rules-url"><span id="rules-import-status"></span>
+    <button id="import-rules-url-btn"></button><button id="add-combo-btn"></button><button id="export-rules-btn"></button><button id="reset-rules-btn"></button>
   </div>
   <script>
     window.addEventListener('DOMContentLoaded', function () {
@@ -186,6 +191,126 @@
         toggle.checked = false;
         toggle.dispatchEvent(new Event('change'));
         assert(document.getElementById('armor-stats-grid').textContent.indexOf('81') !== -1, 'Totale baseStats atteso 81');
+        window.App.Storage.clearDatasets();
+      });
+
+      runTest('M6: Wishlist DIM ("wish", Aegis vs Voltron) e import regole JSON/CSV (rifiuta .txt)', function () {
+        var csv = [
+          'Name,Hash,Id,Tag,Tier,Type,Category,Element,Power,Locked,Equipped,Crafted,Wishlist,Wishlist Note,Perks 0,Perks 1,Perks 2',
+          'Arma Voltron,777,90,favorite,5,Mitraglietta,Energy,Arc,2000,true,false,false,wish,God Roll PvE (Voltron),Telaio leggero,Perk X,Perk Y',
+          'Arma Aegis,778,91,favorite,5,Lanciarazzi,Power,Solar,2000,true,false,false,true,Aegis Endgame DPS,Telaio adattivo,Perk A,Perk B',
+          'Arma Entrambe,779,92,favorite,5,Cannone portatile,KineticSlot,Kinetic,2000,true,false,false,wish,Aegis + Voltron pick,Telaio adattivo,Perk C,Perk D'
+        ].join('\n');
+        var wRes = window.App.Parser.parseAndNormalize(csv, 'destinyWeapons.csv');
+        assert(wRes.items[0].wishlistMatch === true && wRes.items[0].wishlistSources.join(',') === 'voltron', 'Valore wish/Voltron non riconosciuto');
+        assert(wRes.items[1].wishlistSources.join(',') === 'aegis', 'Fonte Aegis non riconosciuta');
+        assert(wRes.items[2].wishlistSources.join(',') === 'aegis,voltron', 'Fonti Aegis + Voltron non riconosciute');
+
+        var ev = window.App.WeaponEval.evaluateWeapon(wRes.items[0]);
+        assert(ev.verdict === 'TIENI (Wishlist DIM)' && ev.comboName === 'God Roll PvE (Voltron)', 'Priorità Wishlist DIM errata');
+
+        window.App.Storage.saveDataset('weapons', wRes.items, 'destinyWeapons.csv');
+        document.getElementById('weapon-wishlist-filter').value = 'aegis';
+        window.App.WeaponsUI.render();
+        var rowsAegis = document.getElementById('weapons-table-body').querySelectorAll('tr');
+        assert(rowsAegis.length === 2 && document.getElementById('weapons-table-body').innerHTML.indexOf('Aegis + Voltron') !== -1, 'Filtro Aegis o badge fonte errato');
+        document.getElementById('weapon-wishlist-filter').value = 'voltron';
+        window.App.WeaponsUI.render();
+        assert(document.getElementById('weapons-table-body').querySelectorAll('tr').length === 2, 'Filtro Voltron errato');
+        document.getElementById('weapon-wishlist-filter').value = 'all';
+
+        // Rifiuto .txt con hash numerici
+        var rejected = window.App.RulesUI.importRulesText('dimwishlist:item=12345&perks=111,222', 'wishlist.txt');
+        assert(rejected === false, 'File .txt a hash numerici deve essere rifiutato');
+
+        // Import CSV testuale
+        var rulesCsv = 'Archetipo,Nome,Mode,Col 3,Col 4\nsmg,Custom SMG,pve,Perk X,Perk Y';
+        var okCsv = window.App.RulesUI.importRulesText(rulesCsv, 'regole.csv');
+        assert(okCsv === true, 'Import CSV regole fallito');
+        var noWishlistWeapon = Object.assign({}, wRes.items[0], { wishlistMatch: false });
+        var evCustom = window.App.WeaponEval.evaluateWeapon(noWishlistWeapon, window.App.Storage.loadRules().weapons, 'pve');
+        assert(evCustom.verdict === 'TIENI' && evCustom.comboName === 'Custom SMG', 'Regola importata da CSV non applicata');
+        window.App.Storage.resetRules();
+        window.App.Storage.clearDatasets();
+      });
+
+      runTest('M6: Filtro Aegis/Voltron su armi raggruppate eredita wishlistSources', function () {
+        var csv = [
+          'Name,Hash,Id,Tag,Tier,Type,Category,Element,Power,Locked,Equipped,Crafted,Wishlist,Wishlist Note,Perks 0,Perks 1,Perks 2',
+          'Arma Multi,800,1,favorite,5,Mitraglietta,Energy,Arc,2000,true,true,false,wish,S-Tier Endgame DPS,Telaio leggero,Perk A,Perk B',
+          'Arma Multi,800,2,,5,Mitraglietta,Energy,Arc,1995,false,false,false,true,Good roll (PvE),Telaio leggero,Perk C,Perk D',
+          'Arma Solo Voltron,801,3,,5,Lanciarazzi,Power,Solar,2000,false,false,false,wish,Boss (PvE),Telaio adattivo,Perk E,Perk F'
+        ].join('\n');
+        var wRes = window.App.Parser.parseAndNormalize(csv, 'destinyWeapons.csv');
+        window.App.Storage.saveDataset('weapons', wRes.items, 'destinyWeapons.csv');
+        document.getElementById('weapon-mode-filter').value = 'all';
+        document.getElementById('weapon-verdict-filter').value = 'ALL';
+        document.getElementById('weapon-type-filter').value = 'ALL';
+        document.getElementById('weapon-wishlist-filter').value = 'aegis';
+        window.App.WeaponsUI.render();
+        var htmlAegis = document.getElementById('weapons-table-body').innerHTML;
+        assert(htmlAegis.indexOf('Arma Multi') !== -1 && htmlAegis.indexOf('Arma Solo Voltron') === -1, 'Filtro Aegis su gruppo errato');
+        assert(htmlAegis.indexOf('Aegis + Voltron') !== -1, 'Unione fonti gruppo errata');
+
+        document.getElementById('weapon-wishlist-filter').value = 'voltron';
+        window.App.WeaponsUI.render();
+        var htmlVoltron = document.getElementById('weapons-table-body').innerHTML;
+        assert(htmlVoltron.indexOf('Arma Multi') !== -1 && htmlVoltron.indexOf('Arma Solo Voltron') !== -1, 'Filtro Voltron su gruppo errato');
+        document.getElementById('weapon-wishlist-filter').value = 'all';
+        window.App.Storage.clearDatasets();
+      });
+
+      runTest('M6: WishlistSync compatta/deduplica in memoria (IndexedDB) e filtra Aegis/Voltron/Solo Wishlist', function () {
+        var aegisTxt = '//notes: Endgame PvE DPS\ndimwishlist:item=1216319404&perks=111,222\n';
+        var voltronPveTxt = '//notes: God Roll (PvE)\ndimwishlist:item=1216319404&perks=222,111\n';
+        var voltronPvpTxt = '//notes: God Roll (PvP)\ndimwishlist:item=1216319404&perks=333,444\n';
+        var pAegis = window.App.WishlistSync.parseDimWishlistTxt(aegisTxt, 'aegis');
+        var pVPve = window.App.WishlistSync.parseDimWishlistTxt(voltronPveTxt, 'voltron');
+        var pVPvp = window.App.WishlistSync.parseDimWishlistTxt(voltronPvpTxt, 'voltron');
+        assert(pAegis.rulesByItem['1216319404'][0].mode === 'pve', 'Parsing mode PvE errato');
+        assert(pVPvp.rulesByItem['1216319404'][0].mode === 'pvp', 'Parsing mode PvP errato');
+
+        var rawMerged = {
+          '1216319404': [
+            pAegis.rulesByItem['1216319404'][0],
+            pVPve.rulesByItem['1216319404'][0],
+            pVPvp.rulesByItem['1216319404'][0]
+          ]
+        };
+        var perkMap = { '111': 'fuorilegge', '222': 'carica esplosiva', '333': 'movimento perpetuo', '444': 'occhio del ciclone' };
+        var compact = window.App.WishlistSync.compactRules(rawMerged, perkMap);
+        // 111,222 e 222,111 in PvE devono deduplicarsi in 1 entry con sources ['aegis','voltron'] -> count totale = 2
+        assert(compact.count === 2, 'Deduplicazione fallita, atteso count=2, ricevuto ' + compact.count);
+        assert(compact.perkMap === undefined, 'perkMap non deve essere salvato nella cache compatta');
+        assert(compact.rulesByItem['1216319404'][0].sources.join(',') === 'aegis,voltron', 'Unione fonti deduplicata errata');
+
+        window.App.WishlistDB.setMemoryCache(compact);
+
+        var weapons = [
+          { id: '1', hash: '1216319404', name: 'Araldo del Fato', tier: '5', type: 'Cannone portatile', element: 'Kinetic', power: 2000, perks: ['Fuorilegge*', 'Carica esplosiva*'] },
+          { id: '2', hash: '999999', name: 'Arma Comune', tier: '5', type: 'Cannone portatile', element: 'Void', power: 1990, perks: ['Adagio'] }
+        ];
+        var evPve = window.App.WeaponEval.evaluateWeapon(weapons[0], null, 'pve');
+        assert(evPve.verdict === 'TIENI' && evPve.wishlistSources.join(',') === 'aegis,voltron', 'Match synced PvE errato');
+
+        window.App.Storage.saveDataset('weapons', weapons, 'destinyWeapons.csv');
+        document.getElementById('weapon-mode-filter').value = 'pve';
+        document.getElementById('weapon-verdict-filter').value = 'ALL';
+        document.getElementById('weapon-type-filter').value = 'ALL';
+        document.getElementById('weapon-wishlist-filter').value = 'wishlist_only';
+        window.App.WeaponsUI.render();
+        var htmlOnly = document.getElementById('weapons-table-body').innerHTML;
+        assert(htmlOnly.indexOf('Araldo del Fato') !== -1 && htmlOnly.indexOf('Arma Comune') === -1, 'Filtro Solo Wishlist errato');
+        assert(document.getElementById('wishlist-sync-status').textContent.indexOf('2 roll') !== -1, 'Contatore roll wishlist mancante');
+
+        document.getElementById('weapon-mode-filter').value = 'pvp';
+        document.getElementById('weapon-wishlist-filter').value = 'aegis';
+        window.App.WeaponsUI.render();
+        assert(document.getElementById('weapons-table-body').innerHTML.indexOf('Araldo del Fato') === -1, 'Roll PvE non deve matchare in PvP');
+
+        document.getElementById('weapon-mode-filter').value = 'pve';
+        document.getElementById('weapon-wishlist-filter').value = 'all';
+        window.App.WishlistDB.setMemoryCache(null);
         window.App.Storage.clearDatasets();
       });
 
